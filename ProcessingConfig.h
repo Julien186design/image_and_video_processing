@@ -16,7 +16,7 @@
 #include <filesystem>
 
 struct parameters {
-    static constexpr std::array<float, 3> proportions = {0.F, 1.F, .1F};
+    static constexpr std::array<float, 3> proportions = {0.F, 1.F, .05F};
     static constexpr std::array<int, 3> colorNuances = {40, 150, 10}; // {first colorNuance, last colorNuance, step}
     static constexpr std::array<int, 2> frames = {0, 0};
     static constexpr int fps = 30;
