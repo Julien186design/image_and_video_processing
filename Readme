@@ -1,0 +1,34 @@
+Image-Processing
+
+A C++ project for manipulating image pixels in fun ways.
+This project is based on Code-Break0's work. I add my own modifications to create cool effects with images.
+
+Here's Code-Break0's project.
+https://github.com/Code-Break0/Image-Processing
+
+Two folders are needed : "Input" and "Output".
+
+"Input" must contain the pictures you want to modify. Organize them in subfolders, for example: "Input/Cake/Oreo cake.jpg".
+
+"Output" must contain the following subfolders:
+
+"50"
+"BTB"
+"BTB Square"
+"BTW"
+"BTW Square"
+"Edge Detector"
+"One Color"
+"Original black and white"
+"Reversal-BT"
+"Reversal-WT"
+"Reversed black and white"
+"Videos"
+"WTB"
+"WTB Square"
+"WTW"
+"WTW Square"
+
+
+Note: The value 50 was chosen arbitrarily. Feel free to modify or remove it. Don't forget to modify your code accordingly (FOLDER_50 in ProcessingConfig.h).
+
