@@ -1,7 +1,7 @@
 #ifndef VIDEOPROCESSING_H
 #define VIDEOPROCESSING_H
 
-#include "ProcessingConfig.h"
+
 
 #include <condition_variable>
 #include <opencv2/imgcodecs.hpp>

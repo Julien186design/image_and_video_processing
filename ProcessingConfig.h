@@ -16,8 +16,8 @@
 #include <filesystem>
 
 struct parameters {
-    static constexpr std::array<float, 3> proportions = {0.F, 1.F, .05F};
-    static constexpr std::array<int, 3> colorNuances = {40, 150, 10}; // {first colorNuance, last colorNuance, step}
+    static constexpr std::array<float, 3> proportions = {0.F, 1.F, .25F};
+    static constexpr std::array<int, 3> colorNuances = {10, 250, 10}; // {first colorNuance, last colorNuance, step}
     static constexpr std::array<int, 2> frames = {0, 0};
     static constexpr int fps = 30;
     static constexpr int fraction = 3;
@@ -26,10 +26,10 @@ struct parameters {
     static constexpr std::array<float, 3> weightOfRGB = {0.F, 1.F, .01F};
     static constexpr std::array<float, 3> passesRGB = {1.F, 1.F, 1.F}; // 0 = original image, 1 = colored image
     static constexpr bool complete_transformation_colors_by_proportion = true;
-    static constexpr bool oneColor = false;
-    static constexpr bool totalReversal = false;
-    static constexpr bool partial = false;
-    static constexpr bool partialInDiagonal = false;
+    static constexpr bool oneColor = true;
+    static constexpr bool totalReversal = true;
+    static constexpr bool partial = true;
+    static constexpr bool partialInDiagonal = true;
     static constexpr int numProportionSteps =
         static_cast<int>((std::get<1>(proportions) - std::get<0>(proportions)) / std::get<2>(proportions)) + 1;
 
@@ -188,7 +188,8 @@ public:
                                      const std::string& baseName,
                                      const std::string& suffix,
                                      const float proportion) -> std::string {
-        return std::format("{}{} - {} {} % ", outputDir, baseName, suffix, formatProportion(100.F * proportion));
+        return std::format(
+            "{}{} - {} {} % ", outputDir, baseName, suffix, formatProportion(100.F * proportion));
     }
 
     // Simple image paths
@@ -196,7 +197,8 @@ public:
         return std::format("{}{} - GT.png", folder_edgedetector, baseName);
     }
 
-    static auto image_one_color(const std::string& baseName, const std::string& colors, int tolerance, size_t idx) -> std::string {
+    static auto image_one_color(const std::string& baseName,
+                                    const std::string& colors, int tolerance, size_t idx) -> std::string {
         return std::format("{}{} - Tolerance {} - {} - {}-2.png",
                            folder_onecolor,
                            baseName,
