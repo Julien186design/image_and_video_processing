@@ -35,9 +35,9 @@ add_executable(Image_and_video_processing
         ProcessingConfig.h
         ProcessingConfig.cpp
         schrift.h
-        VideoCreation.h
-        VideoCreation.cpp
         VideoProcessing.h
+        VideoCreation.cpp
+        VideoCreation.h
 )
 
 # Lien avec OpenCV et OpenMP

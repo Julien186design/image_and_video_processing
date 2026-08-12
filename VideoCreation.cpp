@@ -1,6 +1,6 @@
 #include "ColorConfig.h"
 #include "EdgeDetector.h"
-#include "VideoProcessing.h"
+#include "VideoCreation.h"
 
 #include <algorithm>
 #include <fstream>
