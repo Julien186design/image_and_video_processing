@@ -73,7 +73,7 @@ struct ImageInfo {
 struct Font {
 	SFT sft = {nullptr, 12, 12, 0, 0, SFT_DOWNWARD_Y|SFT_RENDER_IMAGE};
 	Font(const char* fontfile, const uint16_t size) {
-		if((sft.font = sft_loadfile(fontfile)) == NULL) {
+		if((sft.font = sft_loadfile(fontfile)) == nullptr) {
 			Logger::err("\033[31m[ERROR] Failed to load ", fontfile, "\033[0m");
 			return;
 		}

@@ -46,7 +46,7 @@ static void one_color_transformations_streaming(
     const size_t configFrames = pipeline.configCount();
 
     // ── Phase 0 config/frame count ────────────────────────────────────
-    static constexpr std::array<float, 3> phase0Config = {1.F, 0.F, 0.F};
+    static constexpr std::array phase0Config = {1.F, 0.F, 0.F};
     static constexpr int phase0_tol_min  = parameters::toleranceOneColor.at(1);
     static constexpr int phase0_tol_max  = 120;
     static constexpr int phase0_tol_step = parameters::toleranceOneColor.at(2);
@@ -95,7 +95,7 @@ static void one_color_transformations_streaming(
 
     // ── Phase 0: single config {1,0,0}, decreasing tolerance ──────────────
     {
-        const std::vector<float> phase0ConfigVec(phase0Config.begin(), phase0Config.end());
+        const std::vector phase0ConfigVec(phase0Config.begin(), phase0Config.end());
 
         for (int tol = phase0_tol_max; tol >= phase0_tol_min; tol -= phase0_tol_step) {
             resetWorkingBuffer(thread_imgs.at(0), baseImageMat);
@@ -217,7 +217,7 @@ static void reverse_transformations_by_proportion_streaming(
             for (int phase = phase_base; phase < phase_end; ++phase) {
                 const float proportion =
                     parameters::proportions.at(0) +
-                    (static_cast<float>(phase) * parameters::proportions.at(2));
+                    static_cast<float>(phase) * parameters::proportions.at(2);
 
                 if (proportion <= 0.0F) { continue; }
 
@@ -240,7 +240,7 @@ static void reverse_transformations_by_proportion_streaming(
 
                 const float proportion =
                     parameters::proportions.at(0) +
-                    (static_cast<float>(phase) * parameters::proportions.at(2));
+                    static_cast<float>(phase) * parameters::proportions.at(2);
 
                 if (proportion <= 0.0F) { continue; }
 
@@ -322,7 +322,7 @@ static void several_colors_transformations_streaming(
 
     std::vector<int> thresholds(parameters::numProportionSteps);
     for (int i = 0; i < parameters::numProportionSteps; ++i) {
-        const float cp = parameters::proportions.at(0) + (static_cast<float>(i) * parameters::proportions.at(2));
+        const float cp = parameters::proportions.at(0) + static_cast<float>(i) * parameters::proportions.at(2);
         thresholds.at(i) = sortedRGB.at(
             std::min(static_cast<size_t>(static_cast<float>(pixelCount) * cp), pixelCount - 1));
     }
@@ -341,7 +341,7 @@ static void several_colors_transformations_streaming(
                 const size_t end = (t == numThreads - 1) ? pixelCount : (t + 1) * chunkSize;
                 for (size_t pixelIdx = start; pixelIdx < end; ++pixelIdx) {
                     const int s = rgbSums[pixelIdx];
-                    pixelMask[propIdx][pixelIdx] = (s > lowerBound && s <= upperBound);
+                    pixelMask[propIdx][pixelIdx] = s > lowerBound && s <= upperBound;
                 }
             });
         }
@@ -401,8 +401,8 @@ static void several_colors_transformations_streaming(
 
         for (int colorNuance = start;
              reverseOrder
-                 ? (colorNuance >= end)
-                 : (colorNuance <= end);
+                 ? colorNuance >= end
+                 : colorNuance <= end;
              colorNuance += step) {
 
             applyColorTransform(
@@ -515,8 +515,8 @@ static void edge_detector_video(
         #pragma omp parallel for default(none) shared(imgSize, frameBGR, rgb)
             for (int i = 0; i < imgSize; ++i) {
                 frameBGR.data[static_cast<ptrdiff_t>(i * 3)]     = rgb.at((i * 3) + 2); // B
-                frameBGR.data[(i * 3) + 1] = rgb.at((i * 3) + 1); // G
-                frameBGR.data[(i * 3) + 2] = rgb.at(i * 3);     // R
+                frameBGR.data[i * 3 + 1] = rgb.at((i * 3) + 1); // G
+                frameBGR.data[i * 3 + 2] = rgb.at(i * 3);     // R
             }
 
         video.write(frameBGR);

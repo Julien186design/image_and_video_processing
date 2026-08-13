@@ -19,7 +19,7 @@ inline auto generateColorConfigs(
 
     auto toWeight = [](const int idx) -> float {
         return std::get<0>(parameters::weightOfRGB) +
-               (static_cast<float>(idx) * std::get<2>(parameters::weightOfRGB));
+               static_cast<float>(idx) * std::get<2>(parameters::weightOfRGB);
     };
 
     if (binaryOnly) {
@@ -121,7 +121,7 @@ private:
         const int steps  = static_cast<int>((to - from) / step);
 
         for (int i = 0; i <= steps; ++i) {
-            const float tVal = from + (static_cast<float>(i) * step);
+            const float tVal = from + static_cast<float>(i) * step;
             values.push_back(std::clamp(tVal, std::min(from, to), std::max(from, to)));
         }
         return values;

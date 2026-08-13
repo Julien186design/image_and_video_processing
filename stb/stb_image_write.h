@@ -405,10 +405,9 @@ static void stbiw__write1(stbi__write_context *s, unsigned char a)
 
 static void stbiw__write3(stbi__write_context *s, unsigned char a, unsigned char b, unsigned char c)
 {
-   int n;
    if ((size_t)s->buf_used + 3 > sizeof(s->buffer))
       stbiw__write_flush(s);
-   n = s->buf_used;
+   int n = s->buf_used;
    s->buf_used = n+3;
    s->buffer[n+0] = a;
    s->buffer[n+1] = b;
@@ -451,7 +450,7 @@ static void stbiw__write_pixel(stbi__write_context *s, int rgb_dir, int comp, in
 static void stbiw__write_pixels(stbi__write_context *s, int rgb_dir, int vdir, int x, int y, int comp, void *data, int write_alpha, int scanline_pad, int expand_mono)
 {
    stbiw_uint32 zero = 0;
-   int i,j, j_end;
+   int j, j_end;
 
    if (y <= 0)
       return;
@@ -466,7 +465,7 @@ static void stbiw__write_pixels(stbi__write_context *s, int rgb_dir, int vdir, i
    }
 
    for (; j != j_end; j += vdir) {
-      for (i=0; i < x; ++i) {
+      for (int i = 0; i < x; ++i) {
          unsigned char *d = (unsigned char *) data + (j*x+i)*comp;
          stbiw__write_pixel(s, rgb_dir, comp, write_alpha, expand_mono, d);
       }
@@ -542,7 +541,7 @@ static int stbi_write_tga_core(stbi__write_context *s, int x, int y, int comp, v
       return stbiw__outfile(s, -1, -1, x, y, comp, 0, (void *) data, has_alpha, 0,
          "111 221 2222 11", 0, 0, format, 0, 0, 0, 0, 0, x, y, (colorbytes + has_alpha) * 8, has_alpha * 8);
    } else {
-      int i,j,k;
+      int j,k;
       int jend, jdir;
 
       stbiw__writef(s, "111 221 2222 11", 0,0,format+8, 0,0,0, 0,0,x,y, (colorbytes + has_alpha) * 8, has_alpha * 8);
@@ -560,7 +559,7 @@ static int stbi_write_tga_core(stbi__write_context *s, int x, int y, int comp, v
          unsigned char *row = (unsigned char *) data + j * x * comp;
          int len;
 
-         for (i = 0; i < x; i += len) {
+         for (int i = 0; i < x; i += len) {
             unsigned char *begin = row + i * comp;
             int diff = 1;
             len = 1;
@@ -696,7 +695,6 @@ static void stbiw__write_hdr_scanline(stbi__write_context *s, int width, int nco
          s->func(s->context, rgbe, 4);
       }
    } else {
-      int c,r;
       /* encode into scratch buffer */
       for (x=0; x < width; x++) {
          switch(ncomp) {
@@ -719,13 +717,13 @@ static void stbiw__write_hdr_scanline(stbi__write_context *s, int width, int nco
       s->func(s->context, scanlineheader, 4);
 
       /* RLE each component separately */
-      for (c=0; c < 4; c++) {
+      for (int c = 0; c < 4; c++) {
          unsigned char *comp = &scratch[width*c];
 
          x = 0;
          while (x < width) {
             // find first run
-            r = x;
+            int r = x;
             while (r+2 < width) {
                if (comp[r] == comp[r+1] && comp[r] == comp[r+2])
                   break;
@@ -765,7 +763,7 @@ static int stbi_write_hdr_core(stbi__write_context *s, int x, int y, int comp, f
    else {
       // Each component is stored separately. Allocate scratch space for full output scanline.
       unsigned char *scratch = (unsigned char *) STBIW_MALLOC(x*4);
-      int i, len;
+      int len;
       char buffer[128];
       char header[] = "#?RADIANCE\n# Written by stb_image_write.h\nFORMAT=32-bit_rle_rgbe\n";
       s->func(s->context, header, sizeof(header)-1);
@@ -777,7 +775,7 @@ static int stbi_write_hdr_core(stbi__write_context *s, int x, int y, int comp, f
 #endif
       s->func(s->context, buffer, len);
 
-      for(i=0; i < y; i++)
+      for(int i = 0; i < y; i++)
          stbiw__write_hdr_scanline(s, x, comp, scratch, data + comp*x*(stbi__flip_vertically_on_write ? y-1-i : i));
       STBIW_FREE(scratch);
       return 1;
@@ -1269,27 +1267,27 @@ static void stbiw__jpg_writeBits(stbi__write_context *s, int *bitBufP, int *bitC
 
 static void stbiw__jpg_DCT(float *d0p, float *d1p, float *d2p, float *d3p, float *d4p, float *d5p, float *d6p, float *d7p) {
    float d0 = *d0p, d1 = *d1p, d2 = *d2p, d3 = *d3p, d4 = *d4p, d5 = *d5p, d6 = *d6p, d7 = *d7p;
-   float z1, z2, z3, z4, z5, z11, z13;
+   float z2, z3, z4, z5, z11, z13;
 
-   float tmp0 = d0 + d7;
-   float tmp7 = d0 - d7;
-   float tmp1 = d1 + d6;
-   float tmp6 = d1 - d6;
-   float tmp2 = d2 + d5;
-   float tmp5 = d2 - d5;
-   float tmp3 = d3 + d4;
-   float tmp4 = d3 - d4;
+   const float tmp0 = d0 + d7;
+   const float tmp7 = d0 - d7;
+   const float tmp1 = d1 + d6;
+   const float tmp6 = d1 - d6;
+   const float tmp2 = d2 + d5;
+   const float tmp5 = d2 - d5;
+   const float tmp3 = d3 + d4;
+   const float tmp4 = d3 - d4;
 
    // Even part
    float tmp10 = tmp0 + tmp3;   // phase 2
-   float tmp13 = tmp0 - tmp3;
+   const float tmp13 = tmp0 - tmp3;
    float tmp11 = tmp1 + tmp2;
    float tmp12 = tmp1 - tmp2;
 
    d0 = tmp10 + tmp11;       // phase 3
    d4 = tmp10 - tmp11;
 
-   z1 = (tmp12 + tmp13) * 0.707106781f; // c4
+   float z1 = (tmp12 + tmp13) * 0.707106781f; // c4
    d2 = tmp13 + z1;       // phase 5
    d6 = tmp13 - z1;
 
@@ -1328,7 +1326,7 @@ static void stbiw__jpg_calcBits(int val, unsigned short bits[2]) {
 static int stbiw__jpg_processDU(stbi__write_context *s, int *bitBuf, int *bitCnt, float *CDU, int du_stride, float *fdtbl, int DC, const unsigned short HTDC[256][2], const unsigned short HTAC[256][2]) {
    const unsigned short EOB[2] = { HTAC[0x00][0], HTAC[0x00][1] };
    const unsigned short M16zeroes[2] = { HTAC[0xF0][0], HTAC[0xF0][1] };
-   int dataOff, i, j, n, diff, end0pos, x, y;
+   int dataOff, i, j, n, diff, end0pos, y;
    int DU[64];
 
    // DCT rows
@@ -1342,10 +1340,9 @@ static int stbiw__jpg_processDU(stbi__write_context *s, int *bitBuf, int *bitCnt
    }
    // Quantize/descale/zigzag the coefficients
    for(y = 0, j=0; y < 8; ++y) {
-      for(x = 0; x < 8; ++x,++j) {
-         float v;
+      for(int x = 0; x < 8; ++x,++j) {
          i = y*du_stride+x;
-         v = CDU[i]*fdtbl[j];
+         float v = CDU[i] * fdtbl[j];
          // DU[stbiw__jpg_ZigZag[j]] = (int)(v < 0 ? ceilf(v - 0.5f) : floorf(v + 0.5f));
          // ceilf() and floorf() are C99, not C89, but I /think/ they're not needed here anyway?
          DU[stbiw__jpg_ZigZag[j]] = (int)(v < 0 ? v - 0.5f : v + 0.5f);

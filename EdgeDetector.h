@@ -147,8 +147,8 @@ public:
         for (size_t k = 0; k < imgSize; ++k)
         {
         	const double h = std::atan2(gy[k], gx[k]) * 180.0 / M_PI + 180.0;
-            double v = (mx == mn) ? 0.0 : (g[k] - mn) / (mx - mn);
-            v = (v > threshold) ? v : 0.0;
+            double v = mx == mn ? 0.0 : (g[k] - mn) / (mx - mn);
+            v = v > threshold ? v : 0.0;
 
             const double s = v;
             const double l = v;

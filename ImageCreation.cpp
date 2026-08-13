@@ -67,7 +67,7 @@ static void complete_transformations_by_proportion(
 ) {
     if constexpr (!parameters::complete_transformation_colors_by_proportion) { return; }
 
-    const std::vector<float> proportions = { 0.25f, 0.50f, 0.75f };
+    const std::vector proportions = { 0.25f, 0.50f, 0.75f };
 
     auto apply = [](Image& img, const float proportion, const size_t transformIdx, const int colNua) -> bool {
         if (proportion <= 0.0f) { return false; }
@@ -103,7 +103,7 @@ static void partial_transformations_by_proportion(
         generatePartialEntries(total_step_by_step_entries);
 
     // Diagonal mode is indicated by the -1 sentinel at index 0
-    const bool diagonal = (!rectangles.empty() && rectangles.at(0) == -1);;
+    const bool diagonal = !rectangles.empty() && rectangles.at(0) == -1;;
 
     // Capture rectangles, fraction, diagonal by value — safe across threads
     auto apply = [rectangles](Image& img, const float proportion, const size_t transformIdx, const int
@@ -160,7 +160,7 @@ static void edge_detector_image(
 	EdgeDetectorPipeline pipeline(img.w, img.h);
 	const std::vector<uint8_t>& rgb = pipeline.process(grayData.data());
 
-	Image GT(img.w, img.h, 3);
+	const Image GT(img.w, img.h, 3);
 	std::memcpy(GT.data, rgb.data(), rgb.size());
 
 	const std::string outputPath = OutputPathBuilder::image_edge_detector(baseName);

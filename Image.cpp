@@ -54,7 +54,7 @@ bool Image::read(const char* filename, const int channel_force) {
 
 bool Image::write(const char* filename) const {
 	const ImageType type = get_file_type(filename);
-	int success;
+	int success = 0;
 	switch (type) {
 	case PNG:
 		success = stbi_write_png(filename, w, h, channels, data, w * channels);
@@ -83,11 +83,14 @@ ImageType Image::get_file_type(const char* filename) {
 	if(const char* ext = strrchr(filename, '.'); ext != nullptr) {
 		if(strcmp(ext, ".png") == 0) {
 			return PNG;
-		} else if(strcmp(ext, ".jpg") == 0) {
+		}
+		if(strcmp(ext, ".jpg") == 0) {
 			return JPG;
-		} else if(strcmp(ext, ".bmp") == 0) {
+		}
+		if(strcmp(ext, ".bmp") == 0) {
 			return BMP;
-		} else if(strcmp(ext, ".tga") == 0) {
+		}
+		if(strcmp(ext, ".tga") == 0) {
 			return TGA;
 		}
 	}
@@ -160,8 +163,8 @@ void Image::simplify_to_dominant_color_combinations(
     const size_t passes = one_shot ? 1 : tValues.empty()
         ? 3 : tValues.size();
 
-    const size_t pixelCount = (size >= static_cast<size_t>(channels))
-        ? (size - static_cast<size_t>(channels - 1))
+    const size_t pixelCount = size >= static_cast<size_t>(channels)
+        ? size - static_cast<size_t>(channels - 1)
         : 0;
 
 	for (size_t i = 0; i < passes; ++i) {
@@ -267,17 +270,14 @@ std::optional<int> Image::sorting_pixels_by_brightness(const float proportion, c
 		}
 		return 765;
 	}
-	else
+	// Traverse from brightest to darkest
+	for (int value = 765; value >= 0; --value)
 	{
-		// Traverse from brightest to darkest
-		for (int value = 765; value >= 0; --value)
-		{
-			cumulative += histogram[value];
-			if (cumulative > targetRank)
-				return value;
-		}
-		return 0;
+		cumulative += histogram[value];
+		if (cumulative > targetRank)
+			return value;
 	}
+	return 0;
 }
 
 auto Image::proportion_complete(
@@ -552,7 +552,7 @@ Image& Image::std_convolve_clamp_to_border(const uint8_t channel, const uint32_t
 				row = h-1;
 			}
 			for (long j = -static_cast<long>(cc); j < static_cast<long>(ker_w - cc); ++j) {
-				long col = (static_cast<long>(k / channels) % w) - j;
+				long col = static_cast<long>(k / channels) % w - j;
 				if(col < 0) {
 					col = 0;
 				} else if(col > w-1) {
@@ -571,19 +571,20 @@ Image& Image::std_convolve_clamp_to_border(const uint8_t channel, const uint32_t
 }
 
 
-Image& Image::std_convolve_cyclic(const uint8_t channel, const uint32_t ker_w, const uint32_t ker_h, double ker[], const uint32_t cr, const uint32_t cc) {
+Image& Image::std_convolve_cyclic(
+	const uint8_t channel, const uint32_t ker_w, const uint32_t ker_h, double ker[], const uint32_t cr, const uint32_t cc) {
 	std::vector<uint8_t> new_data(static_cast<size_t>(w) * h);
 	const uint64_t center = cr*ker_w + cc;
 	for(uint64_t k=channel; k<size; k+=channels) {
 		double c = 0;
-		for(long i = -(static_cast<long>(cr)); i<static_cast<long>(ker_h)-cr; ++i) {
-			long row = (static_cast<long>(k)/channels)/w-i;
+		for(long i = -static_cast<long>(cr); i<static_cast<long>(ker_h)-cr; ++i) {
+			long row = static_cast<long>(k)/channels/w-i;
 			if(row < 0) {
 				row = row%h + h;
 			} else if(row > h-1) {
 				row %= h;
 			}
-			for(long j = -(static_cast<long>(cc)); j<static_cast<long>(ker_w)-cc; ++j) {
+			for(long j = -static_cast<long>(cc); j<static_cast<long>(ker_w)-cc; ++j) {
 				long col = (static_cast<long>(k)/channels)%w-j;
 				if(col < 0) {
 					col = col%w + w;
@@ -657,7 +658,7 @@ void Image::fft(const uint32_t n, std::complex<double> x[], std::complex<double>
 }
 
 
-void Image::ifft(uint32_t n, std::complex<double> X[], std::complex<double>* x) {
+void Image::ifft(const uint32_t n, std::complex<double> X[], std::complex<double>* x) {
 	// X in bit reversed order
 	if (X != x) {
 		memcpy(x, X, n * sizeof(std::complex<double>));
@@ -669,7 +670,7 @@ void Image::ifft(uint32_t n, std::complex<double> X[], std::complex<double>* x) 
 
 	while (half < n) {
 		const uint32_t sub_prob_size = half << 1;
-		const std::complex<double> w_step(cos(2 * M_PI / sub_prob_size), sin(2 * M_PI / sub_prob_size));
+		const std::complex w_step(cos(2 * M_PI / sub_prob_size), sin(2 * M_PI / sub_prob_size));
 
 		for (uint32_t i = 0; i < sub_probs; ++i) {
 			const uint32_t j_begin = i * sub_prob_size;
@@ -714,7 +715,7 @@ void Image::dft_2D(const uint32_t m, const uint32_t n, std::complex<double> x[],
 	//X in column-major & bit-reversed (in rows then columns)
 }
 
-void Image::idft_2D(uint32_t m, uint32_t n, std::complex<double> X[], std::complex<double>* x) {
+void Image::idft_2D(const uint32_t m, const uint32_t n, std::complex<double> X[], std::complex<double>* x) {
 	//X in column-major & bit-reversed (in rows then columns)
 	auto* intermediate = new std::complex<double>[m*n];
 	//cols
@@ -734,30 +735,31 @@ void Image::idft_2D(uint32_t m, uint32_t n, std::complex<double> X[], std::compl
 
 void Image::pad_kernel(const uint32_t ker_w, const uint32_t ker_h, double ker[], const uint32_t cr, const uint32_t cc, const uint32_t pw, const uint32_t ph, std::complex<double>* pad_ker) {
 	//padded so center of kernel is at top left
-	for(long i=-(static_cast<long>(cr)); i<static_cast<long>(ker_h)-cr; ++i) {
-		const uint32_t r = (i<0) ? i+ph : i;
-		for(long j=-(static_cast<long>(cc)); j<static_cast<long>(ker_w)-cc; ++j) {
-			uint32_t c = (j<0) ? j+pw : j;
+	for(long i=-static_cast<long>(cr); i<static_cast<long>(ker_h)-cr; ++i) {
+		const uint32_t r = i<0 ? i+ph : i;
+		for(long j=-static_cast<long>(cc); j<static_cast<long>(ker_w)-cc; ++j) {
+			const uint32_t c = j<0 ? j+pw : j;
 			pad_ker[r*pw+c] = std::complex<double>(ker[(i+cr)*ker_w+(j+cc)], 0);
 		}
 	}
 }
-void Image::pointwise_product(uint64_t l, std::complex<double> a[], std::complex<double> b[], std::complex<double>* p) {
+void Image::pointwise_product(const uint64_t l, std::complex<double> a[], std::complex<double> b[], std::complex<double>* p) {
 	for(uint64_t k=0; k<l; ++k) {
 		p[k] = a[k]*b[k];
 	}
 }
 
-Image& Image::fd_convolve_clamp_to_0(uint8_t channel, uint32_t ker_w, uint32_t ker_h, double ker[], uint32_t cr, uint32_t cc) {
+Image& Image::fd_convolve_clamp_to_0(
+	const uint8_t channel, const uint32_t ker_w, const uint32_t ker_h, double ker[], const uint32_t cr, const uint32_t cc) {
 	//calculate padding
 	/* 1.0
 	uint32_t pw = 1<<((uint8_t)ceil(log2(w+ker_w-1)));
 	uint32_t ph = 1<<((uint8_t)ceil(log2(h+ker_h-1)));
 	uint64_t psize = pw*ph;
 	*/
-	uint32_t pw = 1 << static_cast<uint8_t>(ceil(log2(static_cast<double>(w + ker_w - 1))));
-	uint32_t ph = 1 << static_cast<uint8_t>(ceil(log2(static_cast<double>(h + ker_h - 1))));
-	uint64_t psize = static_cast<uint64_t>(pw) * static_cast<uint64_t>(ph);
+	const uint32_t pw = 1 << static_cast<uint8_t>(ceil(log2(static_cast<double>(w + ker_w - 1))));
+	const uint32_t ph = 1 << static_cast<uint8_t>(ceil(log2(static_cast<double>(h + ker_h - 1))));
+	const uint64_t psize = static_cast<uint64_t>(pw) * static_cast<uint64_t>(ph);
 
 	//pad image
 	auto* pad_img = new std::complex<double>[psize];
@@ -786,18 +788,19 @@ Image& Image::fd_convolve_clamp_to_0(uint8_t channel, uint32_t ker_w, uint32_t k
 
 	return *this;
 }
-Image& Image::fd_convolve_clamp_to_border(uint8_t channel, uint32_t ker_w, uint32_t ker_h, double ker[], uint32_t cr, uint32_t cc) {
+Image& Image::fd_convolve_clamp_to_border(
+	const uint8_t channel, const uint32_t ker_w, const uint32_t ker_h, double ker[], const uint32_t cr, const uint32_t cc) {
 	//calculate padding
-	const uint32_t pw = 1 << (static_cast<uint8_t>(ceil(log2(w + ker_w - 1))));
-	const uint32_t ph = 1 << (static_cast<uint8_t>(ceil(log2(h+ker_h-1))));
-	uint64_t psize = pw*ph;
+	const uint32_t pw = 1 << static_cast<uint8_t>(ceil(log2(w + ker_w - 1)));
+	const uint32_t ph = 1 << static_cast<uint8_t>(ceil(log2(h+ker_h-1)));
+	const uint64_t psize = pw*ph;
 
 	//pad image
 	auto* pad_img = new std::complex<double>[psize];
 	for(uint32_t i=0; i<ph; ++i) {
-		uint32_t r = (i<h) ? i : ((i<h+cr ? h-1 : 0));
+		const uint32_t r = (i<h) ? i : ((i<h+cr ? h-1 : 0));
 		for(uint32_t j=0; j<pw; ++j) {
-			uint32_t c = (j<w) ? j : ((j<w+cc ? w-1 : 0));
+			const uint32_t c = (j<w) ? j : ((j<w+cc ? w-1 : 0));
 			pad_img[i*pw+j] = std::complex<double>(data[(r*w+c)*channels+channel],0);
 		}
 	}
@@ -825,17 +828,17 @@ Image& Image::fd_convolve_clamp_to_border(uint8_t channel, uint32_t ker_w, uint3
 Image& Image::fd_convolve_cyclic(const uint8_t channel, const uint32_t ker_w,
 	const uint32_t ker_h, double ker[], const uint32_t cr, const uint32_t cc) {
 	//calculate padding
-	const uint32_t pw = 1 << (static_cast<uint8_t>(ceil(log2(w + ker_w - 1))));
-	const uint32_t ph = 1 << (static_cast<uint8_t>(ceil(log2(h + ker_h - 1))));
+	const uint32_t pw = 1 << static_cast<uint8_t>(ceil(log2(w + ker_w - 1)));
+	const uint32_t ph = 1 << static_cast<uint8_t>(ceil(log2(h + ker_h - 1)));
 
-	uint64_t psize = pw*ph;
+	const uint64_t psize = pw*ph;
 
 	//pad image
 	auto* pad_img = new std::complex<double>[psize];
 	for(uint32_t i=0; i<ph; ++i) {
-		uint32_t r = (i<h) ? i : ((i<h+cr ? i%h : h-ph+i));
+		const uint32_t r = (i<h) ? i : ((i<h+cr ? i%h : h-ph+i));
 		for(uint32_t j=0; j<pw; ++j) {
-			uint32_t c = (j<w) ? j : ((j<w+cc ? j%w : w-pw+j));
+			const uint32_t c = (j<w) ? j : ((j<w+cc ? j%w : w-pw+j));
 			pad_img[i*pw+j] = std::complex<double>(data[(r*w+c)*channels+channel],0);
 		}
 	}
