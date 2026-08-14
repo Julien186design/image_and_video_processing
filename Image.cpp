@@ -991,7 +991,7 @@ Image& Image::diffmap(const Image& img) {
 
 
 
-Image& Image::diffmap_scale(Image& img, uint8_t scl) {
+Image& Image::diffmap_scale(const Image& img, uint8_t scl) {
 	const int compare_width = std::min(w, img.w);
 	const int compare_height = std::min(h, img.h);
 	const int compare_channels = std::min(channels, img.channels);

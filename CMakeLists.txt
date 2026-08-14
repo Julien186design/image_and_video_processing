@@ -38,6 +38,7 @@ add_executable(Image_and_video_processing
         VideoProcessing.h
         VideoCreation.cpp
         VideoCreation.h
+        ColorBandMask.h
 )
 
 # Lien avec OpenCV et OpenMP

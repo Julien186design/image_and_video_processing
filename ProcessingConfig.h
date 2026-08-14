@@ -16,13 +16,13 @@
 #include <filesystem>
 
 struct parameters {
-    static constexpr std::array<float, 3> proportions = {0.F, 1.F, .01F};
-    static constexpr std::array<int, 3> colorNuances = {0, 250, 25}; // {first colorNuance, last colorNuance, step}
+    static constexpr std::array<float, 3> proportions = {0.F, 1.F, .25F};
+    static constexpr std::array<int, 3> colorNuances = {0, 250, 10}; // {first colorNuance, last colorNuance, step}
     static constexpr std::array<int, 2> frames = {0, 0};
-    static constexpr int fps = 20;
-    static constexpr int fraction = 2;
+    static constexpr int fps = 30;
+    static constexpr int fraction = 1;
     static constexpr std::array<int, 2> rectangles = {40, 63};
-    static constexpr std::array<int, 3> toleranceOneColor = {10, 20, 1};
+    static constexpr std::array<int, 3> toleranceOneColor = {0, 40, 1};
     static constexpr std::array<float, 3> weightOfRGB = {0.F, 1.F, .01F};
     static constexpr std::array<float, 3> passesRGB = {1.F, 1.F, 1.F}; // 0 = original image, 1 = colored image
     static constexpr bool complete_transformation_colors_by_proportion = false;
@@ -84,7 +84,7 @@ constexpr std::array<ThresholdParams, 4> transformation_params = {{
 }};
 
 
-extern const std::string folder_output;
+
 extern const std::string folder_50;
 extern const std::string folder_videos;
 extern const std::string folder_edgedetector;
@@ -353,7 +353,8 @@ public:
     }
 
     void update(const std::size_t current) {
-        const double ratio = static_cast<double>(current) / total_;
+        const double ratio =
+            static_cast<double>(current) / static_cast<double>(total_);
         const auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(
             std::chrono::steady_clock::now() - start_).count();
 

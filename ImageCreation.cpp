@@ -1,7 +1,10 @@
+#include "ColorBandMask.h"
 #include "EdgeDetector.h"
 #include "ImageCreation.h"
 #include "ColorConfig.h"
+#include "VideoCreation.h"
 
+#include <opencv2/imgcodecs.hpp>
 #include <utility>
 
 static void oneColorTransformations(
@@ -165,6 +168,39 @@ static void edge_detector_image(
 
 	const std::string outputPath = OutputPathBuilder::image_edge_detector(baseName);
 	GT.write(outputPath.c_str());
+}
+
+// Independently regenerates the "several colors by proportion" final frame
+// that several_colors_transformations_streaming (VideoCreation.cpp) used to
+// write as the last frame of its video. Reuses the shared band-mask
+// computation from ColorBandMask.h so the result is pixel-identical to that
+// video's last frame, without generating any video.
+bool several_colors_final_image(
+    const std::string& baseName,
+    const std::string& inputPath
+) {
+    if constexpr (!parameters::complete_transformation_colors_by_proportion) { return false; }
+
+    const auto imageOpt = loadImage(inputPath);
+    if (!imageOpt) { return false; }
+    const cv::Mat& baseImageMat = *imageOpt;
+
+    constexpr int nFrames = parameters::numProportionSteps * parameters::numColorNuances;
+
+    const std::vector<std::vector<bool>> pixelMask = computeColorBandMasks(baseImageMat);
+
+    cv::Mat image = baseImageMat.clone();
+    for (int bandIdx = 0; bandIdx < parameters::numProportionSteps; ++bandIdx) {
+        applyColorToMask(image, pixelMask.at(bandIdx), finalColorForBand(bandIdx));
+    }
+
+    const std::string outputImagePath = OutputPathBuilder::image_black_and_white(baseName, nFrames);
+    if (!cv::imwrite(outputImagePath, image)) {
+        Logger::err("Error: Could not write final image to ", outputImagePath);
+        return false;
+    }
+    Logger::log(outputImagePath, " created");
+    return true;
 }
 
 bool processImageTransforms(

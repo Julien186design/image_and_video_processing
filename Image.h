@@ -175,7 +175,7 @@ struct Image {
 
 
 	Image& diffmap(const Image& img);
-	Image& diffmap_scale(Image& img, uint8_t scl = 0);
+	Image& diffmap_scale(const Image& img, uint8_t scl = 0);
 
 	Image& grayscale_avg();
 

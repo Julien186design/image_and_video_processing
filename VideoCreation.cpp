@@ -1,5 +1,7 @@
+#include "ColorBandMask.h"
 #include "ColorConfig.h"
 #include "EdgeDetector.h"
+#include "ImageCreation.h"
 #include "VideoCreation.h"
 
 #include <algorithm>
@@ -271,8 +273,7 @@ static void several_colors_transformations_streaming(
     if (!imageOpt) { return; }
     cv::Mat& baseImageMat = *imageOpt;
 
-    constexpr int nFrames =
-    ((parameters::numProportionSteps + 1) / 2) * parameters::numColorNuances;
+    constexpr int nFrames = parameters::numProportionSteps * parameters::numColorNuances;
 
     if constexpr (nFrames < parameters::fps) {
         Logger::err("Video less than 1 second long, creation canceled");
@@ -293,83 +294,12 @@ static void several_colors_transformations_streaming(
         return;
     }
 
-    const size_t pixelCount = baseImageMat.rows * baseImageMat.cols;
-    const unsigned int numThreads = std::thread::hardware_concurrency();
-    const size_t chunkSize = pixelCount / numThreads;
-    std::vector<std::thread> threads;
-
-    // Compute per-pixel RGB sums in parallel
-    std::vector<int> rgbSums(pixelCount, 0);
-
-    for (unsigned int t = 0; t < numThreads; ++t) {
-        threads.emplace_back([&, t]() {
-            const size_t start = t * chunkSize;
-            const size_t end = (t == numThreads - 1) ? pixelCount : (t + 1) * chunkSize;
-            for (size_t i = start; i < end; ++i) {
-                const int row = static_cast<int>(i / baseImageMat.cols);
-                const int col = static_cast<int>(i % baseImageMat.cols);
-                const cv::Vec3b& pixel = baseImageMat.at<cv::Vec3b>(row, col);
-                rgbSums.at(i) = pixel[0] + pixel[1] + pixel[2];
-            }
-        });
-    }
-    for (auto& t : threads) { t.join(); }
-    threads.clear();
-
-    // Sort RGB sums to derive proportion thresholds
-    std::vector<int> sortedRGB = rgbSums;
-    std::ranges::sort(sortedRGB);
-
-    std::vector<int> thresholds(parameters::numProportionSteps);
-    for (int i = 0; i < parameters::numProportionSteps; ++i) {
-        const float cp = parameters::proportions.at(0) + static_cast<float>(i) * parameters::proportions.at(2);
-        thresholds.at(i) = sortedRGB.at(
-            std::min(static_cast<size_t>(static_cast<float>(pixelCount) * cp), pixelCount - 1));
-    }
-
-    // Build per-step band masks: only pixels in the slice (thresholds[i-1], thresholds[i]]
-    // Step 0 covers [0, thresholds[0]]; step i>0 covers (thresholds[i-1], thresholds[i]].
-    std::vector pixelMask(parameters::numProportionSteps, std::vector<bool>(pixelCount, false));
-
-    for (int propIdx = 0; propIdx < parameters::numProportionSteps; ++propIdx) {
-        const int lowerBound = (propIdx == 0) ? -1 : thresholds.at(propIdx - 1);
-        const int upperBound = thresholds.at(propIdx);
-
-        for (unsigned int t = 0; t < numThreads; ++t) {
-            threads.emplace_back([&, propIdx, t, lowerBound, upperBound]() {
-                const size_t start = t * chunkSize;
-                const size_t end = (t == numThreads - 1) ? pixelCount : (t + 1) * chunkSize;
-                for (size_t pixelIdx = start; pixelIdx < end; ++pixelIdx) {
-                    const int s = rgbSums[pixelIdx];
-                    pixelMask[propIdx][pixelIdx] = s > lowerBound && s <= upperBound;
-                }
-            });
-        }
-        for (auto& t : threads) { t.join(); }
-        threads.clear();
-    }
+    // Per-pixel band membership derived from RGB-sum rank. Shared with the
+    // standalone final-image generator in ImageCreation.cpp (see
+    // ColorBandMask.h) so both produce the exact same band assignment.
+    const std::vector<std::vector<bool>> pixelMask = computeColorBandMasks(baseImageMat);
 
     VideoWriterQueue queue(video);
-
-    // Apply a color value to pixels selected by mask, in parallel
-    auto applyColorTransform = [&](cv::Mat& target, const std::vector<bool>& mask, const uint8_t newColor) {
-        for (unsigned int t = 0; t < numThreads; ++t) {
-            threads.emplace_back([&, t, newColor]() {
-                const size_t start = t * chunkSize;
-                const size_t end = (t == numThreads - 1) ? pixelCount : (t + 1) * chunkSize;
-                for (size_t pixelIdx = start; pixelIdx < end; ++pixelIdx) {
-                    if (mask[pixelIdx]) {
-                        const size_t row = pixelIdx / baseImageMat.cols;
-                        const size_t col = pixelIdx % baseImageMat.cols;
-                        target.at<cv::Vec3b>(static_cast<int>(row), static_cast<int>(col)) =
-                            cv::Vec3b(newColor, newColor, newColor);
-                    }
-                }
-            });
-        }
-        for (auto& t : threads) { t.join(); }
-        threads.clear();
-    };
 
     // accumulated holds the image state built up across all previous steps.
     // Each call to process() mutates only the band pixels of the current step,
@@ -405,7 +335,7 @@ static void several_colors_transformations_streaming(
                  : colorNuance <= end;
              colorNuance += step) {
 
-            applyColorTransform(
+            applyColorToMask(
                 accumulated,
                 mask,
                 static_cast<uint8_t>(colorNuance)
@@ -415,7 +345,7 @@ static void several_colors_transformations_streaming(
              }
 
         // Locks in the final colour
-        applyColorTransform(
+        applyColorToMask(
             accumulated,
             mask,
             static_cast<uint8_t>(end)
@@ -424,22 +354,15 @@ static void several_colors_transformations_streaming(
 
     bool reverseOrder = false;
     for (int i = 0; i < parameters::numProportionSteps; ++i) {
-        const float cp = parameters::proportions.at(0) + (static_cast<float>(i) * parameters::proportions.at(2));
         process(i, reverseOrder);
         reverseOrder = !reverseOrder;
-        ++i;
     }
 
     queue.finish();
     video.release();
 
-    if (const std::string outputImagePath =
-        OutputPathBuilder::image_black_and_white(baseName, nFrames); !cv::imwrite(outputImagePath, accumulated)) {
-        Logger::err("Error: Could not write last frame to ", outputImagePath);
-    } else {
-        Logger::log(outputImagePath, " created");
-    }
-
+    // Final-frame image creation is handled independently by
+    // several_colors_final_image (ImageCreation.cpp).
     Logger::log("\n", outputVideoPath, " created");
 }
 
@@ -568,6 +491,7 @@ void processVideoTransforms(
     else {
         Logger::log("Non-MP4 file detected → colored_transformations");
         several_colors_transformations_streaming(baseName, inputPath);
+        several_colors_final_image(baseName, inputPath);
         one_color_transformations_streaming(baseName, inputPath);
         reverse_transformations_by_proportion_streaming(baseName, inputPath);
     }
