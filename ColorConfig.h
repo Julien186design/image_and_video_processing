@@ -2,11 +2,11 @@
 #define IMAGE_PROCESSING_COLORCONFIG_H
 
 #include <mutex>
+#include <vector>
 
 #include "Image.h"
 #include "ProcessingConfig.h"
-#include <ostream>
-#include <vector>
+
 
 
 inline auto generateColorConfigs(

@@ -16,18 +16,18 @@
 #include <filesystem>
 
 struct parameters {
-    static constexpr std::array<float, 3> proportions = {0.F, 1.F, .25F};
-    static constexpr std::array<int, 3> colorNuances = {0, 250, 10}; // {first colorNuance, last colorNuance, step}
+    static constexpr std::array<float, 3> proportions = {0.F, 1.F, .2F};
+    static constexpr std::array<int, 3> colorNuances = {80, 250, 5}; // {first colorNuance, last colorNuance, step}
     static constexpr std::array<int, 2> frames = {0, 0};
-    static constexpr int fps = 30;
+    static constexpr int fps = 10;
     static constexpr int fraction = 1;
     static constexpr std::array<int, 2> rectangles = {40, 63};
     static constexpr std::array<int, 3> toleranceOneColor = {0, 40, 1};
     static constexpr std::array<float, 3> weightOfRGB = {0.F, 1.F, .01F};
     static constexpr std::array<float, 3> passesRGB = {1.F, 1.F, 1.F}; // 0 = original image, 1 = colored image
-    static constexpr bool complete_transformation_colors_by_proportion = false;
-    static constexpr bool oneColor = false;
-    static constexpr bool totalReversal = false;
+    static constexpr bool complete_transformation_colors_by_proportion = true;
+    static constexpr bool oneColor = true;
+    static constexpr bool totalReversal = true;
     static constexpr bool partial = false;
     static constexpr bool partialInDiagonal = false;
     static constexpr int numProportionSteps =
@@ -85,7 +85,7 @@ constexpr std::array<ThresholdParams, 4> transformation_params = {{
 
 
 
-extern const std::string folder_50;
+extern const std::string folder_colors_nuances;
 extern const std::string folder_videos;
 extern const std::string folder_edgedetector;
 extern const std::string folder_onecolor;
@@ -236,8 +236,8 @@ public:
     }
 
     static std::string image_black_and_white(const std::string& baseName, int nFrames) {
-        return std::format("{}{} - {} images - {} fps - {{{}-{}-{}}} - {{{}-{}-{}}} last frame.png",
-                           folder_videos, baseName, nFrames, parameters::fps,
+        return std::format("{}{} - {} images - {{{}-{}-{}}} - {{{}-{}-{}}} last frame.png",
+                           folder_colors_nuances, baseName, nFrames,
                            formatProportion(parameters::proportions.at(0)),
                            formatProportion(parameters::proportions.at(1)),
                            formatProportion(parameters::proportions.at(2)),
@@ -249,7 +249,7 @@ public:
     // Video paths
     static std::string video_several_colors(const std::string& baseName, int nFrames) {
         return std::format("{}{} - {} images - {} fps - {{{}-{}-{}}} - {{{}-{}-{}}}.mp4",
-                           folder_videos, baseName, nFrames, parameters::fps,
+                           folder_colors_nuances, baseName, nFrames, parameters::fps,
                            formatProportion(parameters::proportions.at(0)),
                            formatProportion(parameters::proportions.at(1)),
                            formatProportion(parameters::proportions.at(2)),
@@ -273,17 +273,6 @@ public:
         return std::format("{}{}_temp.mp4", folder_edgedetector, baseName);
     }
 
-    static std::string video_corrected(const std::string& baseName,
-                                       int framesToProcess,
-                                       const int totalFrames,
-                                       const double fps) {
-        std::string range = framesToProcess == totalFrames ? " - " :
-                            std::format("{{{}-{}}} ", parameters::frames.at(0), parameters::frames.at(1));
-        return std::format("{}{} corrected - {} frames {}{} fps.mp4",
-                           folder_videos, baseName, framesToProcess, range,
-                           formatProportion(static_cast<float>(fps)));
-    }
-
     static std::string video_one_color(const std::string& baseName, size_t nFrames, size_t idx) {
         return std::format("{}{} - {} images - {} fps - {} - {} - {}.mp4",
                                        folder_onecolor, baseName, nFrames,
@@ -304,15 +293,15 @@ public:
     }
 
     static std::string formatToleranceColors(const std::span<const int> toleranceOneColor) {
-        std::string s = "{";
+        std::string string = "{";
         for (size_t i = 0; i < 3; ++i) {
-            if (i > 0) { s += '-';
+            if (i > 0) { string += '-';
 }
-            s += std::to_string(toleranceOneColor[i]);
+            string += std::to_string(toleranceOneColor[i]);
 
         }
-        s += '}';
-        return s;
+        string += '}';
+        return string;
     }
     // Weighted RGB as "{r-g-b}"
     static std::string writingWeightedColors(const std::span<const float> weightOfRGB) {
@@ -324,14 +313,14 @@ public:
             return formatProportion(weightOfRGB[0]);
         }
 
-        std::string s = "{";
+        std::string string = "{";
         for (size_t i = 0; i < 3; ++i) {
-            if (i > 0) { s += '-';
+            if (i > 0) { string += '-';
 }
-            s += formatProportion(weightOfRGB[i]);
+            string += formatProportion(weightOfRGB[i]);
         }
-        s += '}';
-        return s;
+        string += '}';
+        return string;
     }
 };
 

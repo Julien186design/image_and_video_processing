@@ -10,7 +10,71 @@
 #include <opencv2/opencv.hpp>
 #include <sstream>
 #include <string>
-#include <thread>
+
+#include <unistd.h>
+#include <sys/wait.h>
+#include <vector>
+
+[[nodiscard]]
+static std::string format_fixed2(const double value) {
+    std::ostringstream oss;
+    oss << std::fixed << std::setprecision(2) << value;
+    return oss.str();
+}
+
+// Runs ffmpeg via fork+execvp: no shell, so no injection vector.
+// Returns the exit code of the child process, or -1 in case of fork/exec failure.
+[[nodiscard]]
+static int run_ffmpeg_merge(
+    const std::string& tempVideoPath,
+    const std::string& inputVideoPath,
+    const std::string& outputVideoPath,
+    const double startTime,
+    const double duration
+) {
+    std::vector<std::string> args = {
+        "ffmpeg",
+        "-fflags", "+genpts",
+        "-i", tempVideoPath,
+        "-ss", format_fixed2(startTime),
+        "-i", inputVideoPath,
+        "-t", format_fixed2(duration),
+        "-map", "0:v:0",
+        "-map", "1:a:0?",
+        "-c:v", "copy",
+        "-c:a", "aac",
+        "-avoid_negative_ts", "make_zero",
+        "-shortest",
+        "-y",
+        outputVideoPath
+    };
+
+    std::vector<char*> argv;
+    argv.reserve(args.size() + 1);
+    for (auto& a : args) argv.push_back(a.data()); // execvp exige char*, pas const char*
+    argv.push_back(nullptr);
+
+    const pid_t pid = fork();
+    if (pid < 0) {
+        Logger::err("Error: fork() failed");
+        return -1;
+    }
+
+    if (pid == 0) {
+        // Fils : fusionne stderr dans stdout (équivalent du "2>&1" du system() original)
+        dup2(STDOUT_FILENO, STDERR_FILENO);
+        execvp("ffmpeg", argv.data());
+        // execvp ne revient qu'en cas d'échec (ffmpeg absent du PATH, etc.)
+        _exit(127);
+    }
+
+    int status = 0;
+    if (waitpid(pid, &status, 0) < 0) {
+        Logger::err("Error: waitpid() failed");
+        return -1;
+    }
+    return WIFEXITED(status) ? WEXITSTATUS(status) : -1;
+}
 
 // Resets a thread-local working buffer with a fresh copy of the base image
 // before each simplification phase.
@@ -34,6 +98,7 @@ static auto makeFrameWriteCallback(const cv::Mat& baseImageMat, cv::VideoWriter&
         return true;
     };
 }
+
 
 static void one_color_transformations_streaming(
     const std::string& baseName,
@@ -459,19 +524,7 @@ static void edge_detector_video(
     std::string outputVideoPath = OutputPathBuilder::video_edge_detector(
         baseName, framesToProcess, totalFrames, fps_edge_detector_video);
 
-    std::string ffmpegCmd =
-        "ffmpeg -fflags +genpts "
-        "-i \"" + tempVideoPath + "\" "
-        "-ss " + std::to_string(startTime) + " "
-        "-i \"" + inputVideoPath + "\" "
-        "-t " + std::to_string(duration) + " "
-        "-map 0:v:0 -map 1:a:0? "
-        "-c:v copy -c:a aac "
-        "-avoid_negative_ts make_zero "
-        "-shortest -y \"" +
-        outputVideoPath + "\" 2>&1";
-
-    if (const int result = system(ffmpegCmd.c_str()); result == 0) {
+    if (const int result = run_ffmpeg_merge(tempVideoPath, inputVideoPath, outputVideoPath, startTime, duration); result == 0) {
         std::remove(tempVideoPath.c_str());
         Logger::log(outputVideoPath, " successfully created with audio");
     } else {

@@ -7,7 +7,7 @@
 
 
 // Definitions of variables declared as `extern` in the header
-const std::string folder_50          = std::string(folder_output) + "50/";
+const std::string folder_colors_nuances          = std::string(folder_output) + "Colors nuances/";
 const std::string folder_videos       = std::string(folder_output) + "Videos/";
 const std::string folder_edgedetector = std::string(folder_output) + "Edge Detector/";
 const std::string folder_onecolor     = std::string(folder_output) + "One Color/";

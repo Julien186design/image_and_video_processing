@@ -1,8 +1,6 @@
 #ifndef VIDEOPROCESSING_H
 #define VIDEOPROCESSING_H
 
-
-
 #include <condition_variable>
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/videoio.hpp>

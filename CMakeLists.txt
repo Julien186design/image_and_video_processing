@@ -48,12 +48,25 @@ include(CheckCXXCompilerFlag)
 CHECK_CXX_COMPILER_FLAG("-mavx2" COMPILER_SUPPORTS_AVX2)
 CHECK_CXX_COMPILER_FLAG("-fopenmp" COMPILER_SUPPORTS_OPENMP)
 
-target_compile_options(Image_and_video_processing PRIVATE
-        -O3
-        -march=native
-        -mavx2
-        -mfma
-)
+option(ENABLE_ASAN "Build with AddressSanitizer" OFF)
+
+if(ENABLE_ASAN)
+    message(STATUS "AddressSanitizer enabled")
+    target_compile_options(Image_and_video_processing PRIVATE
+            -fsanitize=address
+            -fno-omit-frame-pointer
+            -g
+            -O1
+    )
+    target_link_options(Image_and_video_processing PRIVATE -fsanitize=address)
+else()
+    target_compile_options(Image_and_video_processing PRIVATE
+            -O3
+            -march=native
+            -mavx2
+            -mfma
+    )
+endif()
 
 if(COMPILER_SUPPORTS_OPENMP)
     message(STATUS "OpenMP support, enabling compilation flags.")

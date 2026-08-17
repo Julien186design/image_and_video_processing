@@ -59,7 +59,7 @@ void run_transformations_by_proportion(
     }
 }
 
-bool several_colors_final_image(const std::string& baseName, const std::string& inputPath);
+void several_colors_final_image(const std::string& baseName, const std::string& inputPath);
 
 bool processImageTransforms(
     const std::string& baseName,
