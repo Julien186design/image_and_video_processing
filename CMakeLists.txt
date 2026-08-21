@@ -1,64 +1,104 @@
 cmake_minimum_required(VERSION 3.16)
-project(Image_Processing)
+project(Image_Processing CXX)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-# Standard C++20
+# C++20 Standard Configuration
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
-# Inclusion du dossier stb
-include_directories(${CMAKE_SOURCE_DIR}/stb)
-
-# Détection d'OpenCV
-set(OpenCV_DIR "/usr/lib/x86_64-linux-gnu/cmake/opencv4")
-find_package(OpenCV REQUIRED)
-
-# Activation de OpenMP
-find_package(OpenMP REQUIRED)
-if(OPENMP_FOUND)
-    message(STATUS "OpenMP found; multithreading support enabled.")
-else()
-    message(FATAL_ERROR "OpenMP not found. Install it using 'sudo apt install libomp-dev'.")
+# ------------------------------------------------------------------------------
+# Static Analysis Tools (clang-tidy & cppcheck)
+# ------------------------------------------------------------------------------
+find_program(CLANG_TIDY_EXE NAMES "clang-tidy")
+if(CLANG_TIDY_EXE)
+    set(CMAKE_CXX_CLANG_TIDY
+            ${CLANG_TIDY_EXE}
+            "-checks=bugprone-*,cert-*,clang-analyzer-*,performance-*,portability-*,readability-*,\
+-readability-identifier-length,\
+-readability-magic-numbers,\
+-bugprone-easily-swappable-parameters,\
+-readability-function-cognitive-complexity,\
+-readability-braces-around-statements"
+            "-header-filter=${CMAKE_SOURCE_DIR}/(include|src)/.*"
+    )
 endif()
 
-# Exécutable principal
+find_program(CPPCHECK_EXE NAMES "cppcheck")
+if(CPPCHECK_EXE)
+    set(CMAKE_CXX_CPPCHECK
+            ${CPPCHECK_EXE}
+            "--enable=warning,style,performance,portability"
+            "--inline-suppr"
+            # Ignore the stb folder completely for cppcheck
+            "--suppress=*:stb/*"
+    )
+endif()
+
+# ------------------------------------------------------------------------------
+# External Dependencies
+# ------------------------------------------------------------------------------
+set(OpenCV_DIR "/usr/lib/x86_64-linux-gnu/cmake/opencv4")
+find_package(OpenCV REQUIRED)
+find_package(OpenMP REQUIRED)
+
+# ------------------------------------------------------------------------------
+# Main Target Executable
+# ------------------------------------------------------------------------------
 add_executable(Image_and_video_processing
-        ColorConfig.h
-        EdgeDetector.h
-        Image.cpp
-        Image.h
-        ImageBuffer.h
-        ImageCreation.cpp
-        ImageCreation.h
-        main.cpp
-        ProcessingConfig.h
-        ProcessingConfig.cpp
-        schrift.h
-        VideoProcessing.h
-        VideoCreation.cpp
-        VideoCreation.h
-        ColorBandMask.h
+        src/main.cpp
+        src/Image.cpp
+        src/ImageCreation.cpp
+        src/ProcessingConfig.cpp
+        src/VideoCreation.cpp
+
+        include/ColorConfig.h
+        include/EdgeDetector.h
+        include/Image.h
+        include/ImageBuffer.h
+        include/ImageCreation.h
+        include/ProcessingConfig.h
+        include/schrift.h
+        include/VideoProcessing.h
+        include/VideoCreation.h
+        include/ColorBandMask.h
 )
 
-# Lien avec OpenCV et OpenMP
-target_link_libraries(Image_and_video_processing PRIVATE ${OpenCV_LIBS} OpenMP::OpenMP_CXX)
+# Include directories: 'include' as PRIVATE, 'stb' as SYSTEM to suppress third-party compiler warnings
+target_include_directories(Image_and_video_processing PRIVATE
+        ${CMAKE_SOURCE_DIR}/include
+)
 
-include(CheckCXXCompilerFlag)
-CHECK_CXX_COMPILER_FLAG("-mavx2" COMPILER_SUPPORTS_AVX2)
-CHECK_CXX_COMPILER_FLAG("-fopenmp" COMPILER_SUPPORTS_OPENMP)
+target_include_directories(Image_and_video_processing SYSTEM PRIVATE
+        ${CMAKE_SOURCE_DIR}/stb
+)
 
-option(ENABLE_ASAN "Build with AddressSanitizer" OFF)
+# Compiler Warning Flags
+target_compile_options(Image_and_video_processing PRIVATE
+        -Wall
+        -Wextra
+        -Wconversion
+        -Wshadow
+        -Wpedantic
+)
 
-if(ENABLE_ASAN)
-    message(STATUS "AddressSanitizer enabled")
+# ------------------------------------------------------------------------------
+# Build Options: Sanitizers vs Performance Optimizations
+# ------------------------------------------------------------------------------
+option(ENABLE_SANITIZERS "Build with AddressSanitizer and UndefinedBehaviorSanitizer" OFF)
+
+if(ENABLE_SANITIZERS)
+    message(STATUS "Sanitizers (ASan + UBSan) enabled")
     target_compile_options(Image_and_video_processing PRIVATE
-            -fsanitize=address
+            -fsanitize=address,undefined
             -fno-omit-frame-pointer
             -g
             -O1
     )
-    target_link_options(Image_and_video_processing PRIVATE -fsanitize=address)
+    target_link_options(Image_and_video_processing PRIVATE
+            -fsanitize=address,undefined
+    )
 else()
     target_compile_options(Image_and_video_processing PRIVATE
             -O3
@@ -68,9 +108,10 @@ else()
     )
 endif()
 
-if(COMPILER_SUPPORTS_OPENMP)
-    message(STATUS "OpenMP support, enabling compilation flags.")
-    target_compile_options(Image_and_video_processing PRIVATE -fopenmp)
-else()
-    message(FATAL_ERROR "The compiler does not support OpenMP. Check your GCC installation.")
-endif()
+# ------------------------------------------------------------------------------
+# Target Link Libraries
+# ------------------------------------------------------------------------------
+target_link_libraries(Image_and_video_processing PRIVATE
+        ${OpenCV_LIBS}
+        OpenMP::OpenMP_CXX
+)

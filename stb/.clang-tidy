@@ -1,0 +1,15 @@
+Checks: >
+  bugprone-*,
+  cert-*,
+  clang-analyzer-*,
+  performance-*,
+  portability-*,
+  readability-*,
+  -readability-identifier-length,
+  -readability-magic-numbers,
+  -bugprone-easily-swappable-parameters,
+  -readability-function-cognitive-complexity,
+  -readability-braces-around-statements,
+  -clang-diagnostic-sign-conversion,          # Silences signedness implicit conversions
+  -bugprone-implicit-widening-of-multiplication-result, # Silences size reserve multiplications
+  -readability-uppercase-literal-suffix        # Silences lower-case float/uint suffix warnings (0.25f vs 0.25F)
