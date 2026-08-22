@@ -27,7 +27,7 @@ inline std::vector<int> computeRgbSums(const cv::Mat& baseImageMat) {
     for (unsigned int t = 0; t < numThreads; ++t) {
         threads.emplace_back([&, t]() {
             const size_t start = t * chunkSize;
-            const size_t end = (t == numThreads - 1) ? pixelCount : (t + 1) * chunkSize;
+            const size_t end = t == numThreads - 1 ? pixelCount : (t + 1) * chunkSize;
             for (size_t i = start; i < end; ++i) {
                 const int row = static_cast<int>(i / baseImageMat.cols);
                 const int col = static_cast<int>(i % baseImageMat.cols);
@@ -72,13 +72,13 @@ inline std::vector<std::vector<bool>> computeColorBandMasks(const cv::Mat& baseI
     threads.reserve(numThreads);
 
     for (int propIdx = 0; propIdx < parameters::numProportionSteps; ++propIdx) {
-        const int lowerBound = (propIdx == 0) ? -1 : thresholds.at(propIdx - 1);
+        const int lowerBound = propIdx == 0 ? -1 : thresholds.at(propIdx - 1);
         const int upperBound = thresholds.at(propIdx);
 
         for (unsigned int t = 0; t < numThreads; ++t) {
             threads.emplace_back([&, propIdx, t, lowerBound, upperBound]() {
                 const size_t start = t * chunkSize;
-                const size_t end = (t == numThreads - 1) ? pixelCount : (t + 1) * chunkSize;
+                const size_t end = t == numThreads - 1 ? pixelCount : (t + 1) * chunkSize;
                 for (size_t pixelIdx = start; pixelIdx < end; ++pixelIdx) {
                     const int s = rgbSums[pixelIdx];
                     pixelMask[propIdx][pixelIdx] = s > lowerBound && s <= upperBound;

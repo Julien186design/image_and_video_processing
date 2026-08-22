@@ -273,7 +273,7 @@ public:
         return std::format("{}{}_temp.mp4", folder_edgedetector, baseName);
     }
 
-    static std::string video_one_color(const std::string& baseName, size_t nFrames, size_t idx) {
+    static std::string video_one_color(const std::string& baseName, size_t nFrames) {
         return std::format("{}{} - {} images - {} fps - {} - {} - {}.mp4",
                                        folder_onecolor, baseName, nFrames,
                                        parameters::fps,

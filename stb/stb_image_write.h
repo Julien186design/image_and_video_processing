@@ -258,7 +258,7 @@ int stbi_write_force_png_filter = -1;
 
 static int stbi__flip_vertically_on_write = 0;
 
-STBIWDEF void stbi_flip_vertically_on_write(int flag)
+STBIWDEF void stbi_flip_vertically_on_write(const int flag)
 {
    stbi__flip_vertically_on_write = flag;
 }
@@ -415,8 +415,6 @@ static void stbiw__write3(stbi__write_context *s, unsigned char a, unsigned char
 
 static void stbiw__write_pixel(stbi__write_context *s, const int rgb_dir, const int comp, const int write_alpha, const int expand_mono, const unsigned char *d)
 {
-   unsigned char bg[3] = { 255, 0, 255}, px[3];
-
    if (write_alpha < 0)
       stbiw__write1(s, d[comp - 1]);
 
@@ -430,10 +428,11 @@ static void stbiw__write_pixel(stbi__write_context *s, const int rgb_dir, const 
          break;
       case 4:
          if (!write_alpha) {
-            int k;
+            unsigned char px[3];
+            const unsigned char bg[3] = { 255, 0, 255};
             // composite against pink background
-            for (k = 0; k < 3; ++k)
-               px[k] = bg[k] + ((d[k] - bg[k]) * d[3]) / 255;
+            for (int k = 0; k < 3; ++k)
+               px[k] = bg[k] + (d[k] - bg[k]) * d[3] / 255;
             stbiw__write3(s, px[1 - rgb_dir], px[1], px[1 + rgb_dir]);
             break;
          }
@@ -791,7 +790,7 @@ STBIWDEF int stbi_write_hdr(char const *filename, const int x, const int y, cons
 {
    stbi__write_context s = { nullptr };
    if (stbi__start_write_file(&s,filename)) {
-      int r = stbi_write_hdr_core(&s, x, y, comp, const_cast<float*>(data));
+      const int r = stbi_write_hdr_core(&s, x, y, comp, const_cast<float*>(data));
       stbi__end_write_file(&s);
       return r;
    } else
@@ -1486,10 +1485,10 @@ static int stbi_write_jpg_core(stbi__write_context *s, int width, int height, in
    {
       static const unsigned char head0[] = { 0xFF,0xD8,0xFF,0xE0,0,0x10,'J','F','I','F',0,1,1,0,0,1,0,1,0,0,0xFF,0xDB,0,0x84,0 };
       static const unsigned char head2[] = { 0xFF,0xDA,0,0xC,3,1,0,2,0x11,3,0x11,0,0x3F,0 };
-      const unsigned char head1[] = { 0xFF,0xC0,0,0x11,8,static_cast<unsigned char>(height >> 8),static_cast<unsigned char>(height),(unsigned char)(width>>8),static_cast<unsigned char>(width),
+      const unsigned char head1[] = { 0xFF,0xC0,0,0x11,8,static_cast<unsigned char>(height >> 8),static_cast<unsigned char>(height),static_cast<unsigned char>(width >> 8),static_cast<unsigned char>(width),
                                       3,1,static_cast<unsigned char>(subsample ? 0x22 : 0x11),0,2,0x11,1,3,0x11,1,0xFF,0xC4,0x01,0xA2,0 };
       s->func(s->context, (void*)head0, sizeof(head0));
-      s->func(s->context, (void*)YTable, sizeof(YTable));
+      s->func(s->context, static_cast<void*>(YTable), sizeof(YTable));
       stbiw__putc(s, 1);
       s->func(s->context, UVTable, sizeof(UVTable));
       s->func(s->context, (void*)head1, sizeof(head1));
