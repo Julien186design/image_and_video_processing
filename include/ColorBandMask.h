@@ -25,7 +25,8 @@ inline std::vector<int> computeRgbSums(const cv::Mat& baseImageMat) {
     threads.reserve(numThreads);
 
     for (unsigned int t = 0; t < numThreads; ++t) {
-        threads.emplace_back([&, t]() {
+        threads.emplace_back([&, t]
+        {
             const size_t start = t * chunkSize;
             const size_t end = t == numThreads - 1 ? pixelCount : (t + 1) * chunkSize;
             for (size_t i = start; i < end; ++i) {

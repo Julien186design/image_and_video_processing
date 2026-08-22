@@ -8,7 +8,6 @@
 #include "ProcessingConfig.h"
 
 
-
 inline auto generateColorConfigs(
     const bool binaryOnly) -> std::vector<std::vector<float>>
 {
