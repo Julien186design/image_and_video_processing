@@ -136,7 +136,7 @@ static void one_color_transformations_streaming(
         configFrames, " --- TOLERANCE_RAM ", TOLERANCE_RAM, '\n');
 
     const std::string outputVideoPath =
-        OutputPathBuilder::video_one_color(baseName, totalFrames, 0);
+        OutputPathBuilder::video_one_color(baseName, totalFrames);
 
     cv::VideoWriter writer;
     writer.open(outputVideoPath,
@@ -148,11 +148,11 @@ static void one_color_transformations_streaming(
         return;
     }
 
-    const int num_threads = computeNumThreads();
+    const size_t num_threads = computeNumThreads();
 
     std::vector<Image> thread_imgs;
     thread_imgs.reserve(num_threads);
-    for (int t = 0; t < num_threads; ++t) {
+    for (size_t t = 0; t < num_threads; ++t) {
         thread_imgs.emplace_back(baseImageMat.cols, baseImageMat.rows,
                                  baseImageMat.channels());
     }
@@ -243,8 +243,8 @@ static void reverse_transformations_by_proportion_streaming(
 
     const int width    = baseImageMat.cols;
     const int height   = baseImageMat.rows;
-    const int channels = baseImageMat.channels();
-    const int num_threads = computeNumThreads();
+    const size_t channels = baseImageMat.channels();
+    const size_t num_threads = computeNumThreads();
 
     for (size_t entryIdx = 0; entryIdx < reversal_suffixes.size(); ++entryIdx) {
         const std::string_view suffix = reversal_suffixes[entryIdx];
@@ -288,7 +288,7 @@ static void reverse_transformations_by_proportion_streaming(
 
                 if (proportion <= 0.0F) { continue; }
 
-                const int tid = omp_get_thread_num();
+                const size_t tid = omp_get_thread_num();
                 const int local_phase = phase - phase_base;
 
                 Image& img = thread_imgs.at(tid);
@@ -303,7 +303,7 @@ static void reverse_transformations_by_proportion_streaming(
 
             // Sequential drain in frame order
             for (int phase = phase_base; phase < phase_end; ++phase) {
-                const int local_phase = phase - phase_base;
+                const size_t local_phase = phase - phase_base;
 
                 const float proportion =
                     parameters::proportions.at(0) +
@@ -491,7 +491,7 @@ static void edge_detector_video(
 
         // BGR -> grayscale: average of B, G, R channels
         #pragma omp parallel for default(none) shared(imgSize, frameBGR, grayData)
-            for (int i = 0; i < imgSize; ++i) {
+            for (size_t i = 0; i < imgSize; ++i) {
                 const uint8_t* pixel = frameBGR.data + i * 3;
                 grayData.at(i) = static_cast<uint8_t>((pixel[0] + pixel[1] + pixel[2]) / 3);
             }
@@ -501,7 +501,7 @@ static void edge_detector_video(
 
         // RGB -> BGR conversion for OpenCV compatibility
         #pragma omp parallel for default(none) shared(imgSize, frameBGR, rgb)
-            for (int i = 0; i < imgSize; ++i) {
+            for (size_t i = 0; i < imgSize; ++i) {
                 frameBGR.data[static_cast<ptrdiff_t>(i * 3)]     = rgb.at(i * 3 + 2); // B
                 frameBGR.data[static_cast<ptrdiff_t>(i * 3 + 1)] = rgb.at(i * 3 + 1); // G
                 frameBGR.data[static_cast<ptrdiff_t>(i * 3 + 2)] = rgb.at(i * 3);     // R
