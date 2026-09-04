@@ -63,6 +63,12 @@ add_executable(Image_and_video_processing
         include/VideoProcessing.h
         include/VideoCreation.h
         include/ColorBandMask.h
+        #CLD
+        src/CLD.cpp
+        src/ETF.cpp
+        include/const.h
+        include/CLD.h
+        include/ETF.h
 )
 
 # Include directories: 'include' as PRIVATE, 'stb' as SYSTEM to suppress third-party compiler warnings
@@ -86,7 +92,7 @@ target_compile_options(Image_and_video_processing PRIVATE
 # ------------------------------------------------------------------------------
 # Build Options: Sanitizers vs Performance Optimizations
 # ------------------------------------------------------------------------------
-option(ENABLE_SANITIZERS "Build with AddressSanitizer and UndefinedBehaviorSanitizer" OFF)
+option(ENABLE_SANITIZERS "Build with AddressSanitizer and UndefinedBehaviorSanitizer" ON)
 
 if(ENABLE_SANITIZERS)
     message(STATUS "Sanitizers (ASan + UBSan) enabled")

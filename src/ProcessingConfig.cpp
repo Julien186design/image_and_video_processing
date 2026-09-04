@@ -11,6 +11,7 @@ const std::string folder_colors_nuances          = std::string(folder_output) + 
 const std::string folder_videos       = std::string(folder_output) + "Videos/";
 const std::string folder_edgedetector = std::string(folder_output) + "Edge Detector/";
 const std::string folder_onecolor     = std::string(folder_output) + "One Color/";
+const std::string folder_cld       = std::string(folder_output) + "CLD/";
 
 const std::vector<TransformationEntry> total_step_by_step_entries = {
     { .suffix = "BTB", .output_dir = std::string(folder_output) + "BTB/" },

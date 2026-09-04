@@ -3,6 +3,7 @@
 #include "EdgeDetector.h"
 #include "ImageCreation.h"
 #include "VideoCreation.h"
+#include "CLD.h"
 
 #include <algorithm>
 #include <fstream>
@@ -532,6 +533,53 @@ static void edge_detector_video(
     }
 }
 
+static void coherent_line_drawing_streaming(
+    const std::string& baseName,
+    const std::string& inputPath
+) {
+    if constexpr (!parameters::coherentLineDrawing) { return; }
+
+    const auto [tau_min, tau_max, tau_step] = parameters::cld_tau_range;
+    const int nFrames = static_cast<int>(std::round((tau_max - tau_min) / tau_step)) + 1;
+
+    if (nFrames < parameters::fps) {
+        Logger::err("Video less than 1 second long, creation canceled for CLD");
+        return;
+    }
+
+    CLD cld;
+    cld.sigma_c = parameters::cld_sigma_c;
+    cld.sigma_m = parameters::cld_sigma_m;
+    cld.rho     = parameters::cld_rho;
+
+    cld.readSrc(inputPath);
+    for (int i = 0; i < parameters::cld_ETF_iter; ++i) {
+        cld.etf.refine_ETF(parameters::cld_ETF_kernel);
+    }
+    cld.genCLD();  // remplit cld.FDoG une bonne fois ; le cld.result produit ici est jeté
+
+    const std::string outputVideoPath = OutputPathBuilder::video_cld(baseName, nFrames);
+    auto writerOpt = make_video_writer(outputVideoPath, cld.originalImg.cols, cld.originalImg.rows, parameters::fps);
+    if (!writerOpt) { return; }
+    cv::VideoWriter& writer = *writerOpt;
+
+    VideoWriterQueue queue(writer);
+    cv::Mat frame(cld.FDoG.size(), CV_8UC1);   // pré-allouée : binaryThresholding ne l'alloue pas elle-même
+
+    for (int i = 0; i < nFrames; ++i) {
+        const double tau = tau_min + static_cast<double>(i) * tau_step;
+        cld.binaryThresholding(cld.FDoG, frame, tau);
+        cv::Mat frameBGR;
+        cv::cvtColor(frame, frameBGR, cv::COLOR_GRAY2BGR);
+        queue.enqueue(std::move(frameBGR));
+    }
+
+    queue.finish();
+    writer.release();
+    Logger::log(outputVideoPath, " created");
+}
+
+
 void processVideoTransforms(
     const std::string& baseName,
     const std::string& inputPath
@@ -547,5 +595,6 @@ void processVideoTransforms(
         several_colors_final_image(baseName, inputPath);
         one_color_transformations_streaming(baseName, inputPath);
         reverse_transformations_by_proportion_streaming(baseName, inputPath);
+        coherent_line_drawing_streaming(baseName, inputPath);
     }
 }

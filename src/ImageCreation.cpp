@@ -2,10 +2,12 @@
 #include "EdgeDetector.h"
 #include "ImageCreation.h"
 #include "ColorConfig.h"
+#include "CLD.h"
 
 
 #include <opencv2/imgcodecs.hpp>
 #include <utility>
+#include <opencv2/imgproc.hpp>
 
 #include "VideoCreation.h"
 
@@ -91,7 +93,7 @@ static void complete_transformations_by_proportion(
     constexpr int c0   = parameters::colorNuances.at(0);
     constexpr int c1   = parameters::colorNuances.at(1);
     constexpr int step = c0 != c1 ? c1 - c0 : 1;
-    constexpr std::array<int, 3> twoColors = { c0, c1, step };
+    constexpr std::array twoColors = { c0, c1, step };
 
     run_transformations_by_proportion(
         baseImage, baseName, total_step_by_step_entries,
@@ -167,11 +169,11 @@ static void edge_detector_image(
 	EdgeDetectorPipeline pipeline(img.w, img.h);
 	const std::vector<uint8_t>& rgb = pipeline.process(grayData.data());
 
-	const Image GT(img.w, img.h, 3);
-	std::memcpy(GT.data, rgb.data(), rgb.size());
+	const Image gradient(img.w, img.h, 3);
+	std::memcpy(gradient.data, rgb.data(), rgb.size());
 
 	const std::string outputPath = OutputPathBuilder::image_edge_detector(baseName);
-	GT.write(outputPath.c_str());
+	gradient.write(outputPath.c_str());
 }
 
 // Independently regenerates the "several colors by proportion" final frame
@@ -226,6 +228,39 @@ void several_colors_final_image(
     Logger::log(outputImagePath, " created");
 }
 
+static void coherent_line_drawing_image(
+    const std::string& inputPath,
+    const std::string& baseName
+) {
+    if constexpr (!parameters::coherentLineDrawing) { return; }
+
+    const std::string outputPath = OutputPathBuilder::image_cld(baseName);
+    if (std::filesystem::exists(outputPath)) { return; }
+
+    CLD cld;
+    cld.sigma_c = parameters::cld_sigma_c;
+    cld.sigma_m = parameters::cld_sigma_m;
+    cld.rho     = parameters::cld_rho;
+    cld.tau     = parameters::cld_tau_final;
+
+    cld.readSrc(inputPath);   // fait son propre imread grayscale + appelle etf.initial_ETF en interne
+
+    for (int i = 0; i < parameters::cld_ETF_iter; ++i) {
+        cld.etf.refine_ETF(parameters::cld_ETF_kernel);
+    }
+
+    cld.genCLD();
+    for (int i = 0; i < parameters::cld_CLD_iter; ++i) {
+        cld.combineImage();
+        cld.genCLD();
+    }
+
+    cv::cvtColor(cld.result, cld.result, cv::COLOR_GRAY2RGB);
+    if (!cv::imwrite(outputPath, cld.result)) {
+        Logger::err("Error: could not write CLD output to ", outputPath);
+    }
+}
+
 bool processImageTransforms(
     const std::string& baseName,
     const std::string& inputPath
@@ -241,6 +276,7 @@ bool processImageTransforms(
     const Image image(inputPath.c_str(), 0);
 
     edge_detector_image(image, baseName);
+    coherent_line_drawing_image(inputPath, baseName);
     oneColorTransformations(image, baseName);
     complete_transformations_by_proportion(image, baseName);
     reverse_transformations_by_proportion(image, baseName);

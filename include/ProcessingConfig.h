@@ -17,12 +17,12 @@
 
 struct parameters {
     static constexpr std::array<float, 3> proportions = {0.F, 1.F, .05F};
-    static constexpr std::array<int, 3> colorNuances = {80, 250, 5}; // {first colorNuance, last colorNuance, step}
+    static constexpr std::array<int, 3> colorNuances = {0, 250, 10}; // {first colorNuance, last colorNuance, step}
     static constexpr std::array<int, 2> frames = {0, 0};
     static constexpr int fps = 10;
-    static constexpr int fraction = 2;
+    static constexpr int fraction = 3;
     static constexpr std::array<int, 2> rectangles = {40, 63};
-    static constexpr std::array<int, 3> toleranceOneColor = {0, 40, 1};
+    static constexpr std::array<int, 3> toleranceOneColor = {0, 20, 1};
     static constexpr std::array<float, 3> weightOfRGB = {0.F, 1.F, .01F};
     static constexpr std::array<float, 3> passesRGB = {1.F, 1.F, 1.F}; // 0 = original image, 1 = colored image
     static constexpr bool complete_transformation_colors_by_proportion = false;
@@ -30,6 +30,16 @@ struct parameters {
     static constexpr bool totalReversal = false;
     static constexpr bool partial = false;
     static constexpr bool partialInDiagonal = false;
+    static constexpr bool coherentLineDrawing = true;
+    static constexpr double cld_sigma_c = 1.0;
+    static constexpr double cld_sigma_m = 3.0;
+    static constexpr double cld_rho     = 0.997;
+    static constexpr int    cld_ETF_kernel = 5;
+    static constexpr int    cld_ETF_iter   = 1;
+    static constexpr int    cld_CLD_iter   = 1;
+    // final tau for the still image, and scan range for the video
+    static constexpr double cld_tau_final = 0.8;
+    static constexpr std::array<double, 3> cld_tau_range = {0.5, 0.9, 0.01}; // {min, max, step}
     static constexpr int numProportionSteps =
         static_cast<int>((std::get<1>(proportions) - std::get<0>(proportions)) / std::get<2>(proportions)) + 1;
 
@@ -89,6 +99,7 @@ extern const std::string folder_colors_nuances;
 extern const std::string folder_videos;
 extern const std::string folder_edgedetector;
 extern const std::string folder_onecolor;
+extern const std::string folder_cld;
 
 
 extern const std::vector<TransformationEntry> total_step_by_step_entries;
@@ -244,6 +255,14 @@ public:
                            parameters::colorNuances.at(0),
                            parameters::colorNuances.at(1),
                            parameters::colorNuances.at(2));
+    }
+
+    static std::string image_cld(const std::string& baseName) {
+        return std::format("{}{} - CLD.png", folder_cld, baseName);
+    }
+    static std::string video_cld(const std::string& baseName, int nFrames) {
+        return std::format("{}{} - CLD - {} images - {} fps.mp4",
+                           folder_cld, baseName, nFrames, parameters::fps);
     }
 
     // Video paths

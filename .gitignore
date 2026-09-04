@@ -20,6 +20,8 @@ Dependency trees/
 *.txt
 *.csv
 *.xcf
+*.md
+*.sh
 
 # Other temporary files
 *~
