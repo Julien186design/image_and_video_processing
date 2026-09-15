@@ -20,6 +20,30 @@
 #include <optional>
 #include <array>
 
+
+Image applyDenoise(const Image& input, const float strength) {
+	if (strength <= 0.0f) {
+		return input; // copy using the copy builder
+	}
+
+	Image result(input);
+
+	double kernel[9] = {
+		1, 2, 1,
+		2, 4, 2,
+		1, 2, 1
+	};
+	for (double& v : kernel) {
+		v /= 16.0;
+	}
+
+	for (int c = 0; c < result.channels; ++c) {
+		result.convolve_clamp_to_border(c, 3, 3, kernel, 1, 1);
+	}
+
+	return result;
+}
+
 Image::Image(const char* filename, const int channel_force) : channels(0) {
 	if (read(filename, channel_force)) {
 		Logger::log("Read ", filename);
@@ -244,91 +268,87 @@ void Image::simplify_to_dominant_color_combinations(
 }
 
 
-std::optional<int> Image::sorting_pixels_by_brightness(const float proportion, const bool below) const
-{
-	// Reject invalid proportions
-	if (proportion <= 0.0F || proportion > 1.0F)
-		return std::nullopt;
-
-	// Number of pixels (assuming RGB interleaved)
-	const size_t pixelCount = size / static_cast<size_t>(channels);
-
-	// Histogram for possible RGB sums [0, 765] (765 = 3 * 255)
-	std::array<size_t, 766> histogram{};
-	histogram.fill(0);
-
-	// Build histogram
-	for (size_t i = 0; i < size; i += static_cast<size_t>(channels))
-	{
-		const int sum = data[i] + data[i + 1] + data[i + 2];
-		++histogram[sum];
+Image::BrightnessHistogram Image::compute_brightness_histogram() const {
+	BrightnessHistogram hist;
+	hist.pixelCount = size / static_cast<size_t>(channels);
+	// Single O(W*H) pass, done ONCE per base image instead of once per call.
+	for (size_t i = 0; i < size; i += static_cast<size_t>(channels)) {
+		++hist.counts[data[i] + data[i + 1] + data[i + 2]];
 	}
-
-	// Target rank in sorted order
-	const size_t targetRank =
-		static_cast<float>(pixelCount) * proportion;
-
-	size_t cumulative = 0;
-
-	if (below)
-	{
-
-		// Traverse from darkest to brightest
-		for (int value = 0; value <= 765; ++value)
-		{
-			cumulative += histogram[value];
-			if (cumulative > targetRank) {
-				return value;
+	return hist;
 }
+
+std::optional<int> Image::threshold_from_histogram(
+	const BrightnessHistogram& hist, const float proportion, const bool below) {
+	if (proportion <= 0.0F || proportion > 1.0F) { return std::nullopt; }
+	const auto targetRank = static_cast<size_t>(static_cast<float>(hist.pixelCount) * proportion);
+	size_t cumulative = 0;
+	if (below) {
+		for (int value = 0; value <= 765; ++value) {
+			cumulative += hist.counts[value];
+			if (cumulative > targetRank) { return value; }
 		}
 		return 765;
 	}
-	// Traverse from brightest to darkest
-	for (int value = 765; value >= 0; --value)
-	{
-		cumulative += histogram[value];
-		if (cumulative > targetRank)
-			return value;
+	for (int value = 765; value >= 0; --value) {
+		cumulative += hist.counts[value];
+		if (cumulative > targetRank) { return value; }
 	}
 	return 0;
 }
 
-auto Image::proportion_complete(
-	const float proportion,
-	const int colorNuance,
-	const bool useDarkNuance,
-	const bool below
-) -> Image& {
-	const auto threshold = sorting_pixels_by_brightness(proportion, below);
-	if (!threshold) return *this;
-
-	const int newColor = useDarkNuance ? colorNuance : 255 - colorNuance;
-	for (size_t i = 0; i < size; i += static_cast<size_t>(channels)) {
-		if (const int sum = data[i] + data[i + 1] + data[i + 2]; (below && sum <= *threshold) ||
-			(!below && sum >= *threshold))
-			data[i] = data[i + 1] = data[i + 2] = newColor;
-	}
-	return *this;
+// Legacy entry point kept for isolated call sites — still O(W*H) per call.
+std::optional<int> Image::sorting_pixels_by_brightness(const float proportion, const bool below) const {
+	return threshold_from_histogram(compute_brightness_histogram(), proportion, below);
 }
 
+// Image.cpp
+Image& Image::proportion_complete(const BrightnessHistogram& hist, const float proportion,
+                                   const int colorNuance, const bool useDarkNuance, const bool below) {
+    const auto threshold = threshold_from_histogram(hist, proportion, below);
+    if (!threshold) { return *this; }
+
+    const int newColor = useDarkNuance ? colorNuance : 255 - colorNuance;
+    for (size_t i = 0; i < size; i += static_cast<size_t>(channels)) {
+        if (const int sum = data[i] + data[i + 1] + data[i + 2];
+            (below && sum <= *threshold) || (!below && sum >= *threshold)) {
+            data[i] = data[i + 1] = data[i + 2] = newColor;
+        }
+    }
+    return *this;
+}
+
+// Legacy entry point: builds its own histogram — for isolated calls with no
+// colorNuance loop around them (e.g. reverse_transformations_by_proportion).
+Image& Image::proportion_complete(const float proportion, const int colorNuance,
+                                   const bool useDarkNuance, const bool below) {
+    return proportion_complete(compute_brightness_histogram(), proportion, colorNuance, useDarkNuance, below);
+}
+
+Image& Image::reverse_by_proportion(const BrightnessHistogram& hist, const float proportion, const bool below) {
+    const auto threshold = threshold_from_histogram(hist, proportion, below);
+    if (!threshold) { return *this; }
+
+    const int thresh = *threshold;
+    const auto cmp = below
+        ? [](const int sum, const int t){ return sum <= t; }
+        : [](const int sum, const int t){ return sum >= t; };
+
+    for (size_t i = 0; i < size; i += channels) {
+        if (cmp(data[i] + data[i+1] + data[i+2], thresh)) {
+            data[i]   = 255 - data[i];
+            data[i+1] = 255 - data[i+1];
+            data[i+2] = 255 - data[i+2];
+        }
+    }
+    return *this;
+}
+
+// Legacy entry point, same rationale as above.
 Image& Image::reverse_by_proportion(const float proportion, const bool below) {
-	const auto threshold = sorting_pixels_by_brightness(proportion, below);
-	if (!threshold) return *this;
-
-	const int thresh = *threshold;
-	const auto cmp = below
-		? [](const int sum, const int t){ return sum <= t; }
-		: [](const int sum, const int t){ return sum >= t; };
-
-	for (size_t i = 0; i < size; i += channels) {
-		if (cmp(data[i] + data[i+1] + data[i+2], thresh)) {
-			data[i]   = 255 - data[i];
-			data[i+1] = 255 - data[i+1];
-			data[i+2] = 255 - data[i+2];
-		}
-	}
-	return *this;
+    return reverse_by_proportion(compute_brightness_histogram(), proportion, below);
 }
+
 
 Image& Image::black_and_white(const float proportion, const bool below) {
 	// Compute the threshold based on the given proportion of pixels
@@ -504,7 +524,7 @@ Image& Image::std_convolve_clamp_to_0(const int channel, const int ker_w, const 
     // Initialising the temporary buffer
     memset(new_data, 0, w * h);
 
-    // Calcul de la convolution
+    // Calculation of the convolution
     const int half_ker_w = ker_w / 2;
     const int half_ker_h = ker_h / 2;
 
@@ -543,7 +563,7 @@ Image& Image::std_convolve_clamp_to_0(const int channel, const int ker_w, const 
         data[channels * i + channel] = new_data[i];
     }
 
-    // Libération de la mémoire
+    // Freeing up memory
     delete[] new_data;
 
     return *this;
@@ -894,31 +914,7 @@ Image& Image::convolve_clamp_to_border(const uint8_t channel, const uint32_t ker
 	return std_convolve_clamp_to_border(channel, ker_w, ker_h, ker, cr, cc);
 }
 
-Image applyDenoise(const Image& input, const float strength) {
-	if (strength <= 0.0f) {
-		return input; // copie
-	}
 
-	Image result(input);
-
-	// simple 3×3 Gaussian kernel
-	double kernel[9] = {
-		1, 2, 1,
-		2, 4, 2,
-		1, 2, 1
-	};
-
-	// normalisation
-	for (double& v : kernel) {
-		v /= 16.0;
-	}
-
-	for (int c = 0; c < result.channels; ++c) {
-		result.convolve_clamp_to_border(c, 3, 3, kernel, 1, 1);
-	}
-
-	return result;
-}
 
 Image& Image::remove_haze_black_level() {
     std::array<uint8_t, 3> min_val = {255, 255, 255};
@@ -956,7 +952,7 @@ Image& Image::local_contrast(const float strength) {
 
 	Image blurred(*this);
 
-	// même kernel que ton denoise
+	// the same kernel as your denoise
 	double kernel[9] = {
 		1,2,1,
 		2,4,2,
@@ -1114,7 +1110,7 @@ Image& Image::flipX() {
 			uint8_t* px1 = &data[(x + y * w) * channels];
 			uint8_t* px2 = &data[(w - 1 - x + y * w) * channels];
 
-			// Utilisation de std::copy_n pour copier `channels` éléments
+			// Using std::copy_n to copy `channels` elements
 			std::copy_n(px1, channels, tmp);
 			std::copy_n(px2, channels, px1);
 			std::copy_n(tmp, channels, px2);
@@ -1131,7 +1127,7 @@ Image& Image::flipY() {
 			uint8_t* px1 = &data[(x + y * w) * channels];
 			uint8_t* px2 = &data[(w - 1 - x + y * w) * channels];
 
-			// Utilisation de std::copy_n pour copier `channels` éléments
+			// Using std::copy_n to copy `channels` elements
 			std::copy_n(tmp, channels, px1);
 			std::copy_n(px1, channels, px2);
 			std::copy_n(px2, channels, tmp);
@@ -1168,9 +1164,9 @@ Image& Image::overlay(const Image& source, const int x, const int y) {
 				} else {
 					for (int chnl = 0; chnl < channels; ++chnl) {
 						dstPx[chnl] = static_cast<uint8_t>(
-							BYTE_BOUND((srcPx[chnl] / 255.0f * srcAlpha +
-									   dstPx[chnl] / 255.0f * dstAlpha * (1.0f - srcAlpha)) /
-									  outAlpha * 255.0f)
+							BYTE_BOUND((srcPx[chnl] / 255.0F * srcAlpha +
+									   dstPx[chnl] / 255.0F * dstAlpha * (1.0F - srcAlpha)) /
+									  outAlpha * 255.0F)
 						);
 					}
 					if (channels > 3) {

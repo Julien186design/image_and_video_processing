@@ -78,10 +78,13 @@ static void complete_transformations_by_proportion(
 
     const std::vector proportions = { 0.25f, 0.50f, 0.75f };
 
-    auto apply = [](Image& img, const float proportion, const size_t transformIdx, const int colNua) -> bool {
+    // Computed ONCE for the whole function instead of once per (proportion, entry, colorNuance) call.
+    const auto histogram = baseImage.compute_brightness_histogram();
+
+    auto apply = [&histogram](Image& img, const float proportion, const size_t transformIdx, const int colNua) -> bool {
         if (proportion <= 0.0f) { return false; }
         const auto [below, dark] = transformation_params.at(transformIdx);
-        img.proportion_complete(proportion, colNua, dark, below);
+        img.proportion_complete(histogram, proportion, colNua, dark, below);
         return true;
     };
 
@@ -99,7 +102,7 @@ static void complete_transformations_by_proportion(
         baseImage, baseName, total_step_by_step_entries,
         apply, buildPath,
         &twoColors,
-        &proportions
+        &proportions   // still overrides the default 21-step range with these 3 fixed values
     );
 }
 
@@ -150,30 +153,26 @@ static void reverse_transformations_by_proportion(
     );
 }
 
-static void edge_detector_image(
-	const Image& baseImage,
-	const std::string& baseName
-) {
-	Image img = baseImage;
-	img.grayscale_avg();
-    const size_t img_size = static_cast<size_t>(img.w) * img.h;
+static void edge_detector_image(const Image& baseImage, const std::string& baseName) {
+    const size_t img_size = static_cast<size_t>(baseImage.w) * baseImage.h;
+    const int channels = baseImage.channels;
+    const uint8_t* src = baseImage.data;
 
     std::vector<uint8_t> grayData(img_size);
 
-    const std::span<const uint8_t> dataSpan(img.data, img_size * img.channels);
-
-    for (size_t k = 0, src = 0; k < img_size; ++k, src += static_cast<size_t>(img.channels)) {
-        grayData[k] = dataSpan[src];
+    // Single read-only pass over the source image — no copy, no write-back.
+#pragma omp parallel for schedule(static) default(none) shared(grayData, src, channels, img_size)
+    for (size_t k = 0; k < img_size; ++k) {
+        const uint8_t* px = src + k * static_cast<size_t>(channels);
+        grayData[k] = static_cast<uint8_t>((px[0] + px[1] + px[2]) / 3);
     }
 
-	EdgeDetectorPipeline pipeline(img.w, img.h);
-	const std::vector<uint8_t>& rgb = pipeline.process(grayData.data());
+    EdgeDetectorPipeline pipeline(baseImage.w, baseImage.h);
+    const std::vector<uint8_t>& rgb = pipeline.process(grayData.data());
 
-	const Image gradient(img.w, img.h, 3);
-	std::memcpy(gradient.data, rgb.data(), rgb.size());
-
-	const std::string outputPath = OutputPathBuilder::image_edge_detector(baseName);
-	gradient.write(outputPath.c_str());
+    const Image gradient(baseImage.w, baseImage.h, 3);
+    std::memcpy(gradient.data, rgb.data(), rgb.size());
+    gradient.write(OutputPathBuilder::image_edge_detector(baseName).c_str());
 }
 
 // Independently regenerates the "several colors by proportion" final frame
@@ -243,7 +242,7 @@ static void coherent_line_drawing_image(
     cld.rho     = parameters::cld_rho;
     cld.tau     = parameters::cld_tau_final;
 
-    cld.readSrc(inputPath);   // fait son propre imread grayscale + appelle etf.initial_ETF en interne
+    cld.readSrc(inputPath);   // creates its own grayscale imread function and calls `etf.initial_ETF` internally
 
     for (int i = 0; i < parameters::cld_ETF_iter; ++i) {
         cld.etf.refine_ETF(parameters::cld_ETF_kernel);

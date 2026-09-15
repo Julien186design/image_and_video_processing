@@ -73,7 +73,6 @@ struct OneColorPipeline {
     [[nodiscard]] const std::vector<float>& getTValues() const { return tValues; }
     [[nodiscard]] const std::vector<float>& getLastValues() const { return lastValues; }
 
-    // Used by oneColorTransformations (static images):
     // passes = parameters::numProportionSteps (empty span triggers that path).
     [[nodiscard]] auto applyStatic(
         const Image& img, const int tolerance, const size_t configIdx

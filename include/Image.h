@@ -138,7 +138,7 @@ struct Image {
 	static uint8_t avg_u8_round(const uint8_t a, const uint8_t b) {
 		return static_cast<uint8_t>(
 			(static_cast<unsigned int>(a) +
-			 static_cast<unsigned int>(b) + 1u) / 2u
+			 static_cast<unsigned int>(b) + 1U) / 2U
 		);
 	}
 
@@ -180,8 +180,24 @@ struct Image {
 	Image& grayscale_avg();
 
 	[[nodiscard]] std::optional<int> sorting_pixels_by_brightness(float proportion, bool below) const;
+
+	struct BrightnessHistogram {
+		std::array<size_t, 766> counts{};
+		size_t pixelCount = 0;
+	};
+
+	[[nodiscard]] BrightnessHistogram compute_brightness_histogram() const;
+	[[nodiscard]] static std::optional<int> threshold_from_histogram(
+		const BrightnessHistogram& hist, float proportion, bool below);
+
+	// New overloads taking a precomputed histogram, avoiding recomputation
+	// Image.h
 	Image& proportion_complete(float proportion, int colorNuance, bool useDarkNuance, bool below);
+	Image& proportion_complete(const BrightnessHistogram& hist, float proportion,
+								int colorNuance, bool useDarkNuance, bool below);
+
 	Image& reverse_by_proportion(float proportion, bool below);
+	Image& reverse_by_proportion(const BrightnessHistogram& hist, float proportion, bool below);
 
 	Image& black_and_white(float proportion, bool below);
 
@@ -233,7 +249,7 @@ struct Image {
 
 };
 
-Image applyDenoise(const Image& input, float strength);
+static Image applyDenoise(const Image& input, float strength);
 
 inline ImageInfo extractImageInfo(const std::string& inputFile) {
 	const size_t dotPos = inputFile.find_last_of('.');
@@ -247,7 +263,7 @@ inline ImageInfo extractImageInfo(const std::string& inputFile) {
 	}
 
 	const std::string inputPath = "Input/" + inputFile;
-	return {baseName, inputPath};
+	return {.baseName = baseName, .inputPath = inputPath};
 }
 
 

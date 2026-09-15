@@ -98,7 +98,7 @@ void CLD::flowDoG(const cv::Mat &src, cv::Mat &dst, const double sigma_m)
 
                 const int px          = static_cast<int>(round(pos.x));
                 const int py          = static_cast<int>(round(pos.y));
-                cv::Vec3f tmp         = etf.flowField.at<cv::Vec3f>(py, px);
+                auto tmp         = etf.flowField.at<cv::Vec3f>(py, px);
                 cv::Point2f direction = cv::Point2f(tmp[1], tmp[0]);
 
                 if (direction.x == 0 && direction.y == 0) break;

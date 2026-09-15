@@ -65,7 +65,7 @@ static int run_ffmpeg_merge(
         // Fils : fusionne stderr dans stdout (équivalent du "2>&1" du system() original)
         dup2(STDOUT_FILENO, STDERR_FILENO);
         execvp("ffmpeg", argv.data());
-        // execvp ne revient qu'en cas d'échec (ffmpeg absent du PATH, etc.)
+        // execvp only returns a result if it fails (ffmpeg not in the PATH, etc.)
         _exit(127);
     }
 

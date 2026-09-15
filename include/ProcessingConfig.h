@@ -99,7 +99,6 @@ extern const std::string folder_colors_nuances;
 extern const std::string folder_videos;
 extern const std::string folder_edgedetector;
 extern const std::string folder_onecolor;
-extern const std::string folder_cld;
 
 
 extern const std::vector<TransformationEntry> total_step_by_step_entries;
@@ -258,11 +257,11 @@ public:
     }
 
     static std::string image_cld(const std::string& baseName) {
-        return std::format("{}{} - CLD.png", folder_cld, baseName);
+        return std::format("{}{} - CLD.png", folder_edgedetector, baseName);
     }
     static std::string video_cld(const std::string& baseName, int nFrames) {
         return std::format("{}{} - CLD - {} images - {} fps.mp4",
-                           folder_cld, baseName, nFrames, parameters::fps);
+                           folder_edgedetector, baseName, nFrames, parameters::fps);
     }
 
     // Video paths
