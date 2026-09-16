@@ -1,57 +1,89 @@
-# Image-Processing (Fork)
+# Image & Video Processing (Fork & Integration)
 
-A C++ project for manipulating image data, forked from [Code-Break0/Image-Processing](https://github.com/Code-Break0/Image-Processing).
+A C++20 application for advanced image and video processing, built upon the foundational work of **Code-Break0** and **SSARCandy**. 
 
-## Attribution
+---
 
-This repository is a fork of the original **Image-Processing** project created by [Code-Break0](https://github.com/Code-Break0), licensed under the **GNU General Public License v3.0 (GPL-3.0)**.
+## 📜 Acknowledgments & Attribution
 
-All credit for the original design, architecture, and core implementation goes to Code-Break0. The modifications made in this fork are additions and adaptations built on top of that original work; they do not question, replace, or diminish the original project in any way. If you are looking for the original, unmodified project, please visit the [upstream repository](https://github.com/Code-Break0/Image-Processing).
+This project is a derivative work that integrates and expands upon concepts, algorithms, and implementations from two open-source projects. 
 
-## Changes in this fork
+* **[Code-Break0/Image-Processing](https://github.com/Code-Break0/Image-Processing)**  
+  * **Original License:** GNU General Public License v3.0 (GPL-3.0)  
+  * **Role:** Provided the original architecture and base concepts for processing image data.
+* **[SSARCandy/Coherent-Line-Drawing](https://github.com/SSARCandy/Coherent-Line-Drawing)**  
+  * **Original License:** MIT License  
+  * **Role:** Provided the implementation of the *Coherent Line Drawing* (CLD) and *Flow-based Difference of Gaussians* (FDoG) algorithms based on the paper by Kang et al.
 
-- [multithreading, video processing]
+### Statement of Intent & Context
 
-## Folder Structure
+The modifications, refactoring, and additions introduced in this repository are non-intrusive adaptations designed to extend functionality for specific use cases (such as multithreading performance, video processing pipelines, and localized system integration). 
 
-This project requires two folders at the project root: `Input` and `Output`.
+> **Note:** The changes made here do not invalidate, question, or replace the original works. The operating contexts, goals, and execution environments of this project differ from the upstream repositories. For pure, unmodified, or reference implementations, please consult the respective upstream projects linked above.
+
+---
+
+## ⚖️ Licensing
+
+This project is licensed under the **GNU General Public License v3.0 (GPL-3.0)** to maintain compatibility with copyleft requirements from upstream components.
+
+* All original copyright notices of **Code-Break0** and **SSARCandy** are preserved.
+* Derivative modifications are documented in accordance with GPL-3.0 §5(a).
+* Third-party MIT-licensed components from SSARCandy are included under the terms of the MIT License, preserving attribution.
+
+See the [LICENSE](LICENSE) file for complete details.
+
+---
+
+## 💻 Environment & System Compatibility
+
+This software has been developed, compiled, and benchmarked under a specific environment:
+
+* **OS:** Linux Mint
+* **CPU Architecture:** Intel x86_64
+
+### Compatibility Notice
+
+> ⚠️ **Platform & Hardware Disclaimer:**  
+> Development and testing were strictly conducted on a **Linux Mint system powered by an Intel processor**. Due to hardware-specific optimizations, compiler flags, and environment-dependent multithreading setups, **full functionality on other operating systems (e.g., macOS, Windows) or different CPU architectures (e.g., ARM/Apple Silicon) cannot be guaranteed**. Users compiling on alternative platforms may need to adjust CMake configs or platform-specific dependencies.
+
+---
+
+## ⚙️ Build & Dependencies
+
+### Prerequisites
+
+* **C++ Compiler:** C++20 compliant (`g++` or `clang++`)
+* **Build System:** CMake (≥ 3.16)
+* **Libraries:**
+  * OpenCV 4.x
+  * OpenMP (for parallel processing)
+ 
+---
+
+## 📁 Directory Structure
+
+The program expects two primary folders at the root directory: `Input/` and `Output/`.
 
 ### Input
+Place your raw image files inside categorized sub directories within `Input/`:
 
-`Input` must contain the pictures you want to process. Organize them into subfolders, for example:
+Input/
+└── Category/
+├── sample_image_1.jpg
+└── sample_image_2.jpg
 
-```
-Input/Cake/Oreo cake.jpg
-```
-
-### Output
-
-`Output` must contain the following subfolders:
-
-```
-Output
-├── BTB
-├── BTB Square
-├── BTW
-├── BTW Square
-├── Colors nuances
-├── Edge Detector
-├── One Color
-├── Reversal
-├── Videos
-├── WTB
-├── WTB Square
-├── WTW
-└── WTW Square
-```
-
-## License
-
-This project is licensed under the **GNU General Public License v3.0**, the same license as the original project. See the [LICENSE](LICENSE) file for the full text.
-
-As a derivative work of a GPL-3.0-licensed project, this fork:
-- Retains the original copyright notice of Code-Break0.
-- Is itself distributed under GPL-3.0 (copyleft: any distributed derivative work must remain under GPL-3.0 and provide access to its source code).
-- Documents, in this README, that it is a modified version of the original work (as required by GPL-3.0 §5(a)).
-
-Original project: Copyright (C) Code-Break0 — [Image-Processing](https://github.com/Code-Break0/Image-Processing), GPL-3.0.
+Output/
+├── BTB/
+├── BTB Square/
+├── BTW/
+├── BTW Square/
+├── Colors nuances/
+├── Edge Detector/
+├── One Color/
+├── Reversal/
+├── Videos/
+├── WTB/
+├── WTB Square/
+├── WTW/
+└── WTW Square/
