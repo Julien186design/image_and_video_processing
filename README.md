@@ -25,13 +25,14 @@ The modifications, refactoring, and additions introduced in this repository are 
 
 ## ⚖️ Licensing
 
-This project is licensed under the **GNU General Public License v3.0 (GPL-3.0)** to maintain compatibility with copyleft requirements from upstream components.
+This project is licensed under the **GNU General Public License v3.0 (GPL-3.0)** to maintain compatibility with copyleft requirements from upstream components. GPL-3.0 governs the repository and any distributed build as a whole.
 
+* The full GPL-3.0 text is in [`LICENSE`](LICENSE).
+* Third-party MIT-licensed components from **SSARCandy/Coherent-Line-Drawing** are preserved under their original terms in [`THIRD_PARTY_LICENSES.md`](THIRD_PARTY_LICENSES.md), which also lists the exact files they cover (`include/CLD.h`, `include/ETF.h`, `include/const.h`, `include/gui.h`, `include/postProcessing.h`, `src/CLD.cpp`, `src/ETF.cpp`, `src/cmd.cpp`, `src/gui.cpp`, `src/main.cpp`, `src/postProcessing.cpp`).
 * All original copyright notices of **Code-Break0** and **SSARCandy** are preserved.
-* Derivative modifications are documented in accordance with GPL-3.0 §5(a).
-* Third-party MIT-licensed components from SSARCandy are included under the terms of the MIT License, preserving attribution.
+* Files carrying substantive modifications from their upstream originals are marked as such in a header comment, per GPL-3.0 §5(a).
 
-See the [LICENSE](LICENSE) file for complete details.
+See [`LICENSE`](LICENSE) for the GPL-3.0 text and [`THIRD_PARTY_LICENSES.md`](THIRD_PARTY_LICENSES.md) for third-party notices.
 
 ---
 
